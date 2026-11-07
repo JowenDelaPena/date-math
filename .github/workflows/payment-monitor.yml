@@ -1,0 +1,33 @@
+# Checks the live service can take payments the way real agents pay. A failed run means payments may be broken;
+# GitHub emails the repo owner. Free checks every 6 hours; one real $0.001 self-payment weekly if the BUYER_KEY
+# secret is set (a throwaway wallet with a little USDC on Base; the money goes to PAY_TO, i.e. back to you).
+name: Payment monitor
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"  # free checks
+    - cron: "41 3 * * 1"    # weekly real payment (if BUYER_KEY is set)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Check live payments
+        run: node scripts/payment-monitor.mjs
+        env:
+          BUYER_KEY: ${{ github.event.schedule == '41 3 * * 1' && secrets.BUYER_KEY || '' }}

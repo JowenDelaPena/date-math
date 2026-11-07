@@ -121,7 +121,21 @@ function buildServer(p: Payments | null, free: number, takeFree: (() => Promise<
       console.error("x402 init failed", err);
       return { content: [{ type: "text", text: "payment facilitator unreachable, try again shortly" }], isError: true };
     }
-    const res = await handlers.get(t.name)!(args, { ...extra, _meta: req.params._meta });
+    let res = await handlers.get(t.name)!(args, { ...extra, _meta: req.params._meta });
+    // When a facilitator answers verify with an HTTP error (Coinbase does this for e.g. insufficient funds),
+    // @x402/mcp swallows the reason and returns a bare "Internal Server Error". Give the agent fresh terms and a
+    // usable reason instead, so its wallet can top up and retry. HTTP keeps the facilitator's own message.
+    if (res.isError && res.content?.[0]?.text === "Internal Server Error" && !res._meta?.["x402/payment-response"]) {
+      console.error(JSON.stringify({ evt: "payment_alert", via: "mcp", path: t.name, outcome: "verify_error" }));
+      const terms = await handlers.get(t.name)!(args, { ...extra, _meta: undefined }); // unpaid: terms only, no facilitator call
+      try {
+        const body = JSON.parse(terms.content[0].text);
+        body.error = "payment_verification_failed: the payment could not be verified. Check that the wallet holds enough USDC on Base, then retry.";
+        res = { content: [{ type: "text", text: JSON.stringify(body) }], isError: true };
+      } catch {
+        // keep the original result
+      }
+    }
     // x402 puts the payment terms (and settlement errors) in structuredContent as well as content[0].text. The MCP
     // SDK client validates structuredContent against the tool's outputSchema even when isError is set, so once it
     // has seen tools/list it throws -32602 instead of returning "Payment required", and x402 clients never pay.

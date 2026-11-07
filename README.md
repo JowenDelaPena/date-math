@@ -164,7 +164,7 @@ The service is a single Cloudflare Worker and fits the free plan: every tool use
 ```bash
 cd worker
 npm install
-npm test                 # 151 tests
+npm test                 # 189 tests, including end-to-end payments with the real x402 clients
 npx wrangler login
 npx wrangler deploy
 ```
@@ -184,6 +184,7 @@ Optional secrets (set with `npx wrangler secret put`):
 - **`POCKET_PREFIX`:** a private, unpaid path for trusted relays.
 
 To check your deployment against x402scan's discovery rules, run `node tools/x402scan-audit.mjs https://your-worker.workers.dev`.
+To check that it can actually take payments (HTTP and MCP, the way agents pay), run `API_URL=https://your-worker.workers.dev EXPECTED_PAY_TO=0xYourWallet node worker/scripts/payment-monitor.mjs`.
 
 ## How it's built
 
