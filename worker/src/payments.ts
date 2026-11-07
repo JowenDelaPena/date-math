@@ -6,6 +6,7 @@ import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { bazaarResourceServerExtension, declareDiscoveryExtension } from "@x402/extensions/bazaar";
 import { api } from "./app";
 import { CDP_FACILITATOR_URL, cdpAuthHeaders } from "./cdp";
+import outputExamples from "./output-examples.json";
 import spec from "./openapi.json";
 import { PAID_PATHS, TOOLS } from "./tools";
 
@@ -42,6 +43,8 @@ export function resolveRefs(node: unknown, depth = 0): unknown {
 }
 const op = (path: string) => (spec.paths as any)[path].post;
 export const inputSchemaFor = (path: string) => resolveRefs(op(path).requestBody.content["application/json"].schema) as Record<string, unknown>;
+/** Complete output example for a tool (generated; see test/output-examples.test.ts). Bazaars reject incomplete ones. */
+export const outputExampleFor = (path: string) => (outputExamples as Record<string, unknown>)[path];
 export const outputSchemaFor = (path: string) => resolveRefs(op(path).responses["200"].content["application/json"].schema) as Record<string, unknown>;
 
 export function payConfig(env: Env): PayConfig | null {
@@ -75,7 +78,7 @@ export function buildRoutes(cfg: PayConfig): RoutesConfig {
         bodyType: "json",
         input: t.example,
         inputSchema: inputSchemaFor(t.path),
-        output: { example: t.output, schema: outputSchemaFor(t.path) },
+        output: { example: outputExampleFor(t.path), schema: outputSchemaFor(t.path) },
       }),
     };
   }

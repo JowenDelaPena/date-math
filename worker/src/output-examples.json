@@ -1,0 +1,177 @@
+{
+  "/v1/diff": {
+    "from": "2026-01-31",
+    "to": "2026-03-15",
+    "direction": "forward",
+    "total_days": 43,
+    "total_weeks": 6,
+    "calendar": {
+      "years": 0,
+      "months": 1,
+      "days": 15
+    },
+    "business_days": 29,
+    "iso_duration": "P1M15D"
+  },
+  "/v1/add": {
+    "input": "2026-12-22",
+    "result": "2026-12-31",
+    "weekday": "Thursday",
+    "is_business_day": true
+  },
+  "/v1/convert": {
+    "utc": "2026-11-07T06:30:00Z",
+    "unix_seconds": 1794033000,
+    "from": {
+      "timezone": "Asia/Manila",
+      "datetime": "2026-11-07T14:30:00+08:00",
+      "date": "2026-11-07",
+      "time": "14:30:00",
+      "weekday": "Saturday",
+      "utc_offset": "+08:00"
+    },
+    "to": {
+      "timezone": "America/New_York",
+      "datetime": "2026-11-07T01:30:00-05:00",
+      "date": "2026-11-07",
+      "time": "01:30:00",
+      "weekday": "Saturday",
+      "utc_offset": "-05:00"
+    }
+  },
+  "/v1/info": {
+    "date": "2026-11-07",
+    "weekday": "Saturday",
+    "weekday_number": 6,
+    "iso_year": 2026,
+    "iso_week": 45,
+    "quarter": 4,
+    "day_of_year": 311,
+    "days_in_year": 365,
+    "days_remaining_in_year": 54,
+    "days_in_month": 30,
+    "is_leap_year": false,
+    "is_weekend": true,
+    "unix_seconds": 1794009600
+  },
+  "/v1/holidays": {
+    "country": "PH",
+    "country_name": "Philippines",
+    "year": 2026,
+    "type": "public",
+    "count": 13,
+    "holidays": [
+      {
+        "date": "2026-01-01",
+        "name": "New Year's Day"
+      }
+    ],
+    "source": "date-holidays (CC BY 3.0)"
+  },
+  "/v1/overlap": {
+    "reference_timezone": "Asia/Manila",
+    "from": "2026-11-10T00:00:00+08:00",
+    "to": "2026-11-11T00:00:00+08:00",
+    "participants": [
+      {
+        "timezone": "Asia/Manila",
+        "work_start": "09:00",
+        "work_end": "18:00"
+      }
+    ],
+    "total_overlap_minutes": 60,
+    "windows": [
+      {
+        "start_utc": "2026-11-10T09:00:00Z",
+        "end_utc": "2026-11-10T10:00:00Z",
+        "duration_minutes": 60,
+        "local": [
+          {
+            "timezone": "Asia/Manila",
+            "start": "2026-11-10T17:00:00+08:00",
+            "end": "2026-11-10T18:00:00+08:00"
+          }
+        ]
+      }
+    ]
+  },
+  "/v1/cron": {
+    "expression": "0 9 * * 1-5",
+    "timezone": "Asia/Manila",
+    "description": "At 09:00, Monday through Friday",
+    "from": "2026-11-07T12:36:08.916Z",
+    "next_runs": [
+      {
+        "utc": "2026-11-09T01:00:00Z",
+        "local": "2026-11-09T09:00:00+08:00",
+        "weekday": "Monday"
+      }
+    ]
+  },
+  "/v1/parse": {
+    "text": "next friday at 3pm",
+    "timezone": "Asia/Manila",
+    "reference": "2026-11-07T14:00:00+08:00",
+    "count": 1,
+    "results": [
+      {
+        "matched": "next friday at 3pm",
+        "index": 0,
+        "start": {
+          "utc": "2026-11-13T07:00:00Z",
+          "local": "2026-11-13T15:00:00+08:00",
+          "date": "2026-11-13",
+          "weekday": "Friday"
+        },
+        "certain": [
+          "weekday"
+        ]
+      }
+    ]
+  },
+  "/v1/city": {
+    "at": "2026-11-07T12:36:09.220Z",
+    "results": [
+      {
+        "query": "Cebu",
+        "found": true,
+        "best": {
+          "name": "Cebu",
+          "country": "PH",
+          "region": "Cebu",
+          "timezone": "Asia/Manila",
+          "population": 806817,
+          "match": "exact",
+          "local_time": "2026-11-07T20:36:09+08:00",
+          "weekday": "Saturday",
+          "utc_offset": "+08:00"
+        },
+        "alternatives": []
+      }
+    ]
+  },
+  "/v1/recurrence": {
+    "rrule": "FREQ=MONTHLY;BYDAY=2TU",
+    "timezone": "Asia/Manila",
+    "start": "2026-01-01T10:00",
+    "description": "every month on the 2nd Tuesday",
+    "count": 3,
+    "occurrences": [
+      {
+        "local": "2026-01-13T10:00:00+08:00",
+        "date": "2026-01-13",
+        "weekday": "Tuesday",
+        "utc": "2026-01-13T02:00:00Z"
+      }
+    ]
+  },
+  "/v1/business_hours": {
+    "mode": "deadline",
+    "timezone": "Asia/Manila",
+    "start": "2026-11-06T16:00:00+08:00",
+    "business_minutes": 120,
+    "deadline": "2026-11-09T10:00:00+08:00",
+    "deadline_utc": "2026-11-09T02:00:00Z",
+    "weekday": "Monday"
+  }
+}

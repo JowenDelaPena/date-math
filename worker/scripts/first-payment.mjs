@@ -45,8 +45,13 @@ if (bal < 0.005) {
 }
 
 const pay = wrapFetchWithPaymentFromConfig(fetch, { schemes: [{ network: "eip155:8453", client: new ExactEvmScheme(account) }] });
-// `node scripts/first-payment.mjs new` pays only the newer tools + one MCP call; no argument pays everything.
-const onlyNew = process.argv[2] === "new";
+// `node scripts/first-payment.mjs`          pays every tool once ($0.011) + one MCP call
+// `node scripts/first-payment.mjs new`      pays only the tools marked new below
+// `node scripts/first-payment.mjs city cron` pays only the named tools (path without /v1/)
+// The MCP call uses the free daily tier when it has calls left, so it usually settles nothing.
+const args = process.argv.slice(2);
+const onlyNew = args[0] === "new";
+const named = !onlyNew && args.length ? new Set(args.map((a) => "/v1/" + a.replace(/^\/?(v1\/)?/, ""))) : null;
 const all = [
   ["/v1/info", { date: "2026-11-07" }, false],
   ["/v1/diff", { from: "2026-01-31", to: "2026-03-15", country: "US" }, false],
@@ -56,8 +61,12 @@ const all = [
   ["/v1/overlap", { timezones: ["Asia/Manila", "Europe/London"], date: "2026-11-10", work_start: "09:00", work_end: "18:00" }, true],
   ["/v1/cron", { expression: "0 9 * * 1-5", timezone: "Asia/Manila", count: 3 }, true],
   ["/v1/parse", { text: "next friday at 3pm", timezone: "Asia/Manila" }, true],
+  ["/v1/city", { cities: ["Cebu", "London", "New York"] }, true],
+  ["/v1/recurrence", { rrule: "FREQ=MONTHLY;BYDAY=2TU", start: "2026-01-01T10:00", timezone: "Asia/Manila", count: 3 }, true],
+  ["/v1/business_hours", { start: "2026-11-06T16:00", hours: 2, timezone: "Asia/Manila", work_start: "09:00", work_end: "17:00", country: "PH" }, true],
 ];
-const calls = all.filter(([, , isNew]) => !onlyNew || isNew);
+const calls = all.filter(([path, , isNew]) => (named ? named.has(path) : !onlyNew || isNew));
+if (named && calls.length !== named.size) console.log(`Unknown tool name(s). Known: ${all.map(([p]) => p.slice(4)).join(", ")}`);
 
 for (const [path, body] of calls) {
   const res = await pay(API + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });

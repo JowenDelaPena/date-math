@@ -7,7 +7,7 @@ import { createPaymentWrapper } from "@x402/mcp";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 import { ORIGIN, VERSION } from "./app";
 import { InputError } from "./errors";
-import { getPayments, inputSchemaFor, outputSchemaFor, type Env, type Payments } from "./payments";
+import { getPayments, inputSchemaFor, outputExampleFor, outputSchemaFor, type Env, type Payments } from "./payments";
 import { freeLimit, freeTaker, type QuotaNamespace } from "./quota";
 import { TOOLS, type Tool } from "./tools";
 
@@ -50,7 +50,7 @@ async function paidHandlers(p: Payments): Promise<Map<string, Handler>> {
         transport: "streamable-http",
         inputSchema: inputSchemaFor(t.path),
         example: t.example,
-        output: { example: t.output, schema: outputSchemaFor(t.path) },
+        output: { example: outputExampleFor(t.path), schema: outputSchemaFor(t.path) },
       }),
     });
     handlers.set(t.name, wrap(async (args: Record<string, unknown>) => runTool(t, args)) as unknown as Handler);
