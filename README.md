@@ -13,7 +13,7 @@
 
 | HTTP (`POST`, JSON body) | MCP tool | What it does |
 |---|---|---|
-| `/v1/diff` | `date_diff` | Days, weeks, months and business days between two dates. Pass `country` to skip its public holidays. |
+| `/v1/diff` | `date_diff` | Days, weeks, months and business days between two dates. Pass `country` to skip its public holidays, `workdays` for non Mon–Fri weeks. |
 | `/v1/add` | `date_add` | The date N days, weeks, months or business days before or after a date |
 | `/v1/convert` | `timezone_convert` | Converts a time between IANA time zones (DST-aware) |
 | `/v1/info` | `date_info` | Weekday, ISO week, quarter, day of year, leap year |
@@ -24,8 +24,12 @@
 | `/v1/city` | `city_time` | City name → time zone and local time (7,000+ cities) |
 | `/v1/recurrence` | `recurring_dates` | Expands an iCal RRULE ("every 2nd Tuesday") into dates |
 | `/v1/business_hours` | `business_hours_deadline` | SLA deadline N working hours from now, or working time elapsed |
+| `/v1/business_day` | `business_day` | Is a date a business day, and if not, why (weekend or which holiday); next/previous business day; the month's business days |
+| `/v1/pay_dates` | `pay_dates` | Payroll and billing dates (monthly, 15th and last, biweekly, weekly) moved off weekends and holidays |
 
-Every response is a JSON object. Errors look like `{"error":{"code","message"}}`. Full schemas and examples are in [`/openapi.json`](https://date-math.datemath.workers.dev/openapi.json).
+Business-day tools take `workdays` (weekday numbers, 0 = Sunday) for other workweeks, e.g. `[0,1,2,3,4]` for Sun–Thu or `[1,2,3,4,5,6]` for Mon–Sat.
+
+Every response is a JSON object. Errors look like `{"error":{"code","message","example"}}`, where `example` is a valid request body for that tool. Full schemas and examples are in [`/openapi.json`](https://date-math.datemath.workers.dev/openapi.json).
 
 ## Examples
 
@@ -42,6 +46,8 @@ curl -i -X POST https://date-math.datemath.workers.dev/v1/business_hours \
 | `/v1/add` `{"date":"2026-12-22","business_days":5,"country":"PH"}` | `"result":"2026-12-31"` (skips Christmas and Rizal Day) |
 | `/v1/overlap` `{"timezones":["Asia/Manila","Europe/London"],"date":"2026-11-10","work_end":"18:00"}` | One window: `09:00–10:00Z` |
 | `/v1/recurrence` `{"rrule":"FREQ=MONTHLY;BYDAY=2TU","start":"2026-01-01T10:00","timezone":"Asia/Manila","count":3}` | Jan 13, Feb 10, Mar 10 at 10:00 +08:00 |
+| `/v1/business_day` `{"date":"2026-12-25","country":"PH"}` | Not a business day: `"holiday":"Christmas Day"`, next is `2026-12-28` |
+| `/v1/pay_dates` `{"schedule":"semi_monthly","from":"2027-01-01","count":2}` | Jan 15, then Jan 31 (Sunday) moved to Fri Jan 29 |
 
 ## Paying from code
 
@@ -98,7 +104,7 @@ The service is a single Cloudflare Worker and fits the free plan: every tool use
 ```bash
 cd worker
 npm install
-npm test                 # 108 tests
+npm test                 # 140 tests
 npx wrangler login
 npx wrangler deploy
 ```

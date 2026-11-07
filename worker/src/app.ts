@@ -5,7 +5,7 @@ import { TOOLS } from "./tools";
 
 // The free API (no payments). index.ts wraps it with x402 for direct paid access and adds /mcp.
 export const SERVICE = "date-math";
-export const VERSION = "1.3.0";
+export const VERSION = "1.4.0";
 export const ORIGIN = "https://date-math.datemath.workers.dev";
 const specBody = JSON.stringify(spec);
 
@@ -46,7 +46,7 @@ app.get("/", (c) =>
     mcp: `${ORIGIN}/mcp (Streamable HTTP; first 25 tool calls per day free, then paid per call via x402 MCP)`,
     endpoints: Object.fromEntries(TOOLS.map((t) => [`POST ${t.path}`, { mcp_tool: t.name, description: t.description, example: t.example }])),
     free: ["GET /v1/version", "GET /v1/health", "GET /openapi.json", "GET /llms.txt", "GET /.well-known/x402"],
-    errors: '{"error":{"code","message"}} with HTTP 400/404/413',
+    errors: '{"error":{"code","message","example"}} with HTTP 400/404/413; example is a valid request body for that tool',
     payment:
       "Pay per call with x402 v2 (USDC on Base, $0.001). POST without payment returns 402 with terms in the PAYMENT-REQUIRED header; retry with PAYMENT-SIGNATURE.",
   }),
@@ -69,7 +69,7 @@ const LLMS_TXT = `# Date Math
 Base URL: ${ORIGIN}
 Payment: x402 v2, $0.001 per call in USDC on Base (eip155:8453). An unpaid call returns HTTP 402 with terms in the PAYMENT-REQUIRED header; pay and retry with PAYMENT-SIGNATURE. Any x402 client (e.g. @x402/fetch) handles this automatically.
 MCP: ${ORIGIN}/mcp (Streamable HTTP). Same tools. The first 25 tool calls per day per IP are free, so any MCP client can try them; after that, calls are paid via x402 MCP (e.g. @x402/mcp client). Plain HTTP calls are always paid.
-All HTTP calls: POST a JSON body, get a JSON object back. Errors: {"error":{"code","message"}}.
+All HTTP calls: POST a JSON body, get a JSON object back. Errors: {"error":{"code","message","example"}}, where example is a valid request body for that tool.
 
 ## Tools
 
@@ -87,7 +87,11 @@ for (const t of TOOLS) app.post(t.path, async (c) => c.json(t.run(parseBody(awai
 
 app.notFound((c) => fail(c, 404, "not_found", `no route for ${c.req.method} ${c.req.path}; see /openapi.json`));
 app.onError((err, c) => {
-  if (err instanceof InputError) return fail(c, err.code === "body_too_large" ? 413 : 400, err.code, err.message);
+  if (err instanceof InputError) {
+    // Hand back a known-good body so agents can correct themselves instead of giving up.
+    const example = TOOLS.find((t) => t.path === c.req.path)?.example;
+    return c.json({ error: { code: err.code, message: err.message, ...(example ? { example } : {}) } }, err.code === "body_too_large" ? 413 : 400);
+  }
   console.error(err);
   return fail(c, 500, "internal_error", "unexpected error");
 });

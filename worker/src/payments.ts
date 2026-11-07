@@ -42,10 +42,17 @@ export function resolveRefs(node: unknown, depth = 0): unknown {
   return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, resolveRefs(v, depth + 1)]));
 }
 const op = (path: string) => (spec.paths as any)[path].post;
-export const inputSchemaFor = (path: string) => resolveRefs(op(path).requestBody.content["application/json"].schema) as Record<string, unknown>;
+// Resolved schemas are memoized per isolate (resolving $refs is the expensive part) and warmed at startup in mcp.ts.
+const schemaCache = new Map<string, Record<string, unknown>>();
+const memo = (key: string, build: () => unknown) => {
+  let v = schemaCache.get(key);
+  if (!v) schemaCache.set(key, (v = build() as Record<string, unknown>));
+  return v;
+};
+export const inputSchemaFor = (path: string) => memo("in " + path, () => resolveRefs(op(path).requestBody.content["application/json"].schema));
 /** Complete output example for a tool (generated; see test/output-examples.test.ts). Bazaars reject incomplete ones. */
 export const outputExampleFor = (path: string) => (outputExamples as Record<string, unknown>)[path];
-export const outputSchemaFor = (path: string) => resolveRefs(op(path).responses["200"].content["application/json"].schema) as Record<string, unknown>;
+export const outputSchemaFor = (path: string) => memo("out " + path, () => resolveRefs(op(path).responses["200"].content["application/json"].schema));
 
 export function payConfig(env: Env): PayConfig | null {
   if (!env.PAY_TO) return null;

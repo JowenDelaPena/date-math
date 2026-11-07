@@ -99,7 +99,7 @@
     "expression": "0 9 * * 1-5",
     "timezone": "Asia/Manila",
     "description": "At 09:00, Monday through Friday",
-    "from": "2026-11-07T12:36:08.916Z",
+    "from": "2026-11-07T12:52:58.229Z",
     "next_runs": [
       {
         "utc": "2026-11-09T01:00:00Z",
@@ -130,7 +130,7 @@
     ]
   },
   "/v1/city": {
-    "at": "2026-11-07T12:36:09.220Z",
+    "at": "2026-11-07T12:52:58.696Z",
     "results": [
       {
         "query": "Cebu",
@@ -142,7 +142,7 @@
           "timezone": "Asia/Manila",
           "population": 806817,
           "match": "exact",
-          "local_time": "2026-11-07T20:36:09+08:00",
+          "local_time": "2026-11-07T20:52:58+08:00",
           "weekday": "Saturday",
           "utc_offset": "+08:00"
         },
@@ -173,5 +173,33 @@
     "deadline": "2026-11-09T10:00:00+08:00",
     "deadline_utc": "2026-11-09T02:00:00Z",
     "weekday": "Monday"
+  },
+  "/v1/business_day": {
+    "date": "2026-12-25",
+    "weekday": "Friday",
+    "is_business_day": false,
+    "reason": "holiday",
+    "holiday": "Christmas Day",
+    "next_business_day": "2026-12-28",
+    "previous_business_day": "2026-12-24",
+    "month": {
+      "business_days": 21,
+      "first_business_day": "2026-12-01",
+      "last_business_day": "2026-12-31",
+      "business_day_number": null
+    }
+  },
+  "/v1/pay_dates": {
+    "schedule": "semi_monthly",
+    "adjust": "previous",
+    "count": 4,
+    "pay_dates": [
+      {
+        "scheduled": "2026-12-15",
+        "pay_date": "2026-12-15",
+        "weekday": "Tuesday",
+        "adjusted": false
+      }
+    ]
   }
 }

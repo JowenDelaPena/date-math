@@ -2,9 +2,9 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Date Math",
-    "version": "1.3.0",
-    "description": "Deterministic date and time math for AI agents: date differences, business days, date arithmetic, time zone conversion and calendar facts. Paid per call via x402 (USDC on Base, $0.001); probes and spec are free. All inputs are JSON bodies; all responses are JSON objects. Errors return {\"error\":{\"code\",\"message\"}}.",
-    "x-guidance": "Date Math does exact date and time arithmetic so you don't have to. Every tool is POST with a JSON body, returns a JSON object, and costs $0.001 (x402, USDC on Base). POST /v1/diff: days/weeks/months/business days between two dates (pass country, e.g. \"US\", to skip its public holidays). POST /v1/add: the date N days/weeks/months/business days before or after a date. POST /v1/convert: a time in another IANA time zone (DST-aware). POST /v1/info: weekday, ISO week, quarter or leap-year status of a date. POST /v1/holidays: a country's public holidays for a year. POST /v1/overlap: when working hours overlap across time zones (meeting slots). POST /v1/cron: explain a cron expression and list its next runs. POST /v1/parse: turn text like \"next Friday at 3pm\" into an exact datetime. POST /v1/city: the time zone and local time of a city by name. POST /v1/recurrence: concrete dates for an iCal RRULE (\"every 2nd Tuesday\"). POST /v1/business_hours: SLA deadline N working hours from now, or working hours elapsed. Dates are YYYY-MM-DD; datetimes are ISO 8601 with Z or an offset; time zones are IANA names. Errors return HTTP 400 with {\"error\":{\"code\",\"message\"}}. Also available as an MCP server at /mcp.",
+    "version": "1.4.0",
+    "description": "Deterministic date and time math for AI agents: date differences, business days, date arithmetic, time zone conversion and calendar facts. Paid per call via x402 (USDC on Base, $0.001); probes and spec are free. All inputs are JSON bodies; all responses are JSON objects. Errors return {\"error\":{\"code\",\"message\",\"example\"}}.",
+    "x-guidance": "Date Math does exact date and time arithmetic so you don't have to. Every tool is POST with a JSON body, returns a JSON object, and costs $0.001 (x402, USDC on Base). POST /v1/diff: days/weeks/months/business days between two dates (pass country, e.g. \"US\", to skip its public holidays). POST /v1/add: the date N days/weeks/months/business days before or after a date. POST /v1/convert: a time in another IANA time zone (DST-aware). POST /v1/info: weekday, ISO week, quarter or leap-year status of a date. POST /v1/holidays: a country's public holidays for a year. POST /v1/overlap: when working hours overlap across time zones (meeting slots). POST /v1/cron: explain a cron expression and list its next runs. POST /v1/parse: turn text like \"next Friday at 3pm\" into an exact datetime. POST /v1/city: the time zone and local time of a city by name. POST /v1/recurrence: concrete dates for an iCal RRULE (\"every 2nd Tuesday\"). POST /v1/business_hours: SLA deadline N working hours from now, or working hours elapsed. POST /v1/business_day: is a date a business day (and if not, which holiday), plus the next/previous business day. POST /v1/pay_dates: payroll or billing dates (monthly, 15th and last, biweekly, weekly) moved off weekends and holidays. Business-day tools accept workdays (e.g. [0,1,2,3,4] for Sun–Thu). Dates are YYYY-MM-DD; datetimes are ISO 8601 with Z or an offset; time zones are IANA names. Errors return HTTP 400 with {\"error\":{\"code\",\"message\",\"example\"}}; example is a valid body for that tool. Also available as an MCP server at /mcp.",
     "contact": {
       "email": "jowendelapena2003@gmail.com"
     }
@@ -1511,6 +1511,334 @@
           }
         }
       }
+    },
+    "/v1/business_day": {
+      "post": {
+        "operationId": "businessDay",
+        "summary": "Is a date a business day; next/previous business day; month business-day stats",
+        "tags": [
+          "Date arithmetic"
+        ],
+        "x-payment-info": {
+          "price": {
+            "mode": "fixed",
+            "currency": "USD",
+            "amount": "0.001"
+          },
+          "protocols": [
+            {
+              "x402": {}
+            }
+          ]
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "date"
+                ],
+                "properties": {
+                  "date": {
+                    "$ref": "#/components/schemas/Date"
+                  },
+                  "country": {
+                    "$ref": "#/components/schemas/Country"
+                  },
+                  "holidays": {
+                    "$ref": "#/components/schemas/Holidays"
+                  },
+                  "workdays": {
+                    "$ref": "#/components/schemas/Workdays"
+                  }
+                }
+              },
+              "example": {
+                "date": "2026-12-25",
+                "country": "PH"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "date",
+                    "weekday",
+                    "is_business_day",
+                    "reason",
+                    "holiday",
+                    "next_business_day",
+                    "previous_business_day",
+                    "month"
+                  ],
+                  "properties": {
+                    "date": {
+                      "type": "string"
+                    },
+                    "weekday": {
+                      "type": "string"
+                    },
+                    "is_business_day": {
+                      "type": "boolean"
+                    },
+                    "reason": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "weekend",
+                        "holiday",
+                        null
+                      ],
+                      "description": "Why it is not a business day; null if it is"
+                    },
+                    "holiday": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Holiday name if the date is a holiday"
+                    },
+                    "next_business_day": {
+                      "type": "string"
+                    },
+                    "previous_business_day": {
+                      "type": "string"
+                    },
+                    "month": {
+                      "type": "object",
+                      "required": [
+                        "business_days",
+                        "first_business_day",
+                        "last_business_day",
+                        "business_day_number"
+                      ],
+                      "properties": {
+                        "business_days": {
+                          "type": "integer"
+                        },
+                        "first_business_day": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "last_business_day": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "business_day_number": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "description": "Which business day of the month this date is (1 = first); null if not a business day"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "Payment Required"
+          }
+        }
+      }
+    },
+    "/v1/pay_dates": {
+      "post": {
+        "operationId": "payDates",
+        "summary": "Payroll / billing dates adjusted for weekends and holidays",
+        "tags": [
+          "Date arithmetic"
+        ],
+        "x-payment-info": {
+          "price": {
+            "mode": "fixed",
+            "currency": "USD",
+            "amount": "0.001"
+          },
+          "protocols": [
+            {
+              "x402": {}
+            }
+          ]
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "schedule",
+                  "from"
+                ],
+                "properties": {
+                  "schedule": {
+                    "type": "string",
+                    "enum": [
+                      "monthly",
+                      "semi_monthly",
+                      "biweekly",
+                      "weekly"
+                    ]
+                  },
+                  "from": {
+                    "$ref": "#/components/schemas/Date",
+                    "description": "First pay date returned is on or after this date"
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 24,
+                    "default": 6,
+                    "description": "How many pay dates to return"
+                  },
+                  "days": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 2,
+                    "items": {
+                      "oneOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 31
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "last"
+                          ]
+                        }
+                      ]
+                    },
+                    "description": "monthly: 1 day, semi_monthly: 2 days of the month (1–31 or \"last\"; 31 clamps to month end). Defaults: [\"last\"] and [15, \"last\"]"
+                  },
+                  "anchor": {
+                    "$ref": "#/components/schemas/Date",
+                    "description": "weekly/biweekly: any one known pay date"
+                  },
+                  "adjust": {
+                    "type": "string",
+                    "enum": [
+                      "previous",
+                      "next",
+                      "nearest",
+                      "none"
+                    ],
+                    "default": "previous",
+                    "description": "Where to move a pay date that falls on a weekend or holiday"
+                  },
+                  "country": {
+                    "$ref": "#/components/schemas/Country"
+                  },
+                  "holidays": {
+                    "$ref": "#/components/schemas/Holidays"
+                  },
+                  "workdays": {
+                    "$ref": "#/components/schemas/Workdays"
+                  }
+                }
+              },
+              "example": {
+                "schedule": "semi_monthly",
+                "from": "2026-12-01",
+                "count": 4,
+                "country": "PH"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schedule",
+                    "adjust",
+                    "count",
+                    "pay_dates"
+                  ],
+                  "properties": {
+                    "schedule": {
+                      "type": "string"
+                    },
+                    "adjust": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "pay_dates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "scheduled",
+                          "pay_date",
+                          "weekday",
+                          "adjusted"
+                        ],
+                        "properties": {
+                          "scheduled": {
+                            "type": "string",
+                            "description": "The nominal date (e.g. the 15th)"
+                          },
+                          "pay_date": {
+                            "type": "string",
+                            "description": "The actual business day to pay"
+                          },
+                          "weekday": {
+                            "type": "string"
+                          },
+                          "adjusted": {
+                            "type": "boolean"
+                          },
+                          "reason": {
+                            "type": "string",
+                            "description": "weekend, or holiday: <name>"
+                          },
+                          "is_business_day": {
+                            "type": "boolean",
+                            "description": "Only with adjust none"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "Payment Required"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1531,7 +1859,7 @@
         "items": {
           "$ref": "#/components/schemas/Date"
         },
-        "description": "Dates excluded from business-day counts (weekends are always excluded)"
+        "description": "Extra dates excluded from business-day counts (rest days from workdays are always excluded)"
       },
       "InfoRequest": {
         "type": "object",
@@ -1562,9 +1890,12 @@
           },
           "country": {
             "$ref": "#/components/schemas/Country"
+          },
+          "workdays": {
+            "$ref": "#/components/schemas/Workdays"
           }
         },
-        "description": "business_days counts weekdays in [from, to) minus holidays; only for date inputs."
+        "description": "business_days counts working days (default Mon–Fri, see workdays) in [from, to) minus holidays; only for date inputs."
       },
       "AddRequest": {
         "type": "object",
@@ -1589,7 +1920,7 @@
           },
           "business_days": {
             "type": "integer",
-            "description": "Applied after calendar units; skips weekends and holidays"
+            "description": "Applied after calendar units; skips rest days (see workdays) and holidays"
           },
           "hours": {
             "type": "integer"
@@ -1605,6 +1936,9 @@
           },
           "country": {
             "$ref": "#/components/schemas/Country"
+          },
+          "workdays": {
+            "$ref": "#/components/schemas/Workdays"
           }
         },
         "description": "Negative values subtract. Months clamp to month end (Jan 31 + 1 month = Feb 28/29). Time units require a datetime input."
@@ -1640,6 +1974,10 @@
               },
               "message": {
                 "type": "string"
+              },
+              "example": {
+                "type": "object",
+                "description": "A valid request body for this tool, to correct the call"
               }
             }
           }
@@ -1701,6 +2039,24 @@
         "pattern": "^[A-Za-z]{2}$",
         "description": "ISO 3166-1 alpha-2 country code (207 countries); its public holidays (2000–2050) are excluded from business days",
         "example": "US"
+      },
+      "Workdays": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 7,
+        "items": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6
+        },
+        "description": "Working days of the week, 0 = Sunday. Default [1,2,3,4,5] (Mon–Fri); e.g. [0,1,2,3,4] for Sun–Thu or [1,2,3,4,5,6] for Mon–Sat",
+        "example": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
       }
     },
     "responses": {

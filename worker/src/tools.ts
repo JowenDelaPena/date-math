@@ -2,6 +2,7 @@
 import { add, convert, diff, info } from "./date";
 import { cron, holidays, overlap, parse } from "./more";
 import { businessHours, cityTime, recurrence } from "./more2";
+import { businessDay, payDates } from "./biz";
 
 export interface Tool {
   name: string; // MCP tool name
@@ -109,6 +110,24 @@ TOOLS.push(
       "SLA math in working hours: the deadline N business hours after a start time, or business time elapsed between two times. Custom hours and workdays, holidays, country public holidays, DST-aware.",
     run: businessHours,
     example: { start: "2026-11-06T16:00", hours: 2, timezone: "Asia/Manila", work_start: "09:00", work_end: "17:00", country: "PH" },
+  },
+  {
+    name: "business_day",
+    path: "/v1/business_day",
+    title: "Business-day check",
+    description:
+      "Is a date a business day? If not, why (weekend, or which public holiday). Also the next and previous business day, and the month's business-day count, first and last business day. Use for office-open checks, shipping cut-offs, settlement dates. Country holidays, custom holidays and custom workweeks (e.g. Sun–Thu, Mon–Sat).",
+    run: businessDay,
+    example: { date: "2026-12-25", country: "PH" },
+  },
+  {
+    name: "pay_dates",
+    path: "/v1/pay_dates",
+    title: "Payroll and billing dates",
+    description:
+      "Upcoming pay or billing dates for monthly, semi-monthly (e.g. 15th and last day), biweekly or weekly schedules, moved off weekends and public holidays (to the previous, next or nearest business day). Use for payroll calendars, invoice due dates and recurring billing.",
+    run: payDates,
+    example: { schedule: "semi_monthly", from: "2026-12-01", count: 4, country: "PH" },
   },
 );
 

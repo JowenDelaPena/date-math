@@ -4,9 +4,9 @@ import { InputError } from "./errors";
 import { countryHolidayDates } from "./holidays";
 export { InputError };
 
-const DAY_MS = 86_400_000;
+export const DAY_MS = 86_400_000;
 const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
-const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+export const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MAX_BUSINESS_DAYS = 1_000_000; // ~3,800 years; computed in O(1), so the cap only guards range
 
 // ---------- parsing ----------
@@ -66,7 +66,22 @@ export function parseHolidays(value: unknown): Set<string> {
   return new Set(value.map((h, i) => fmtDate(parseDate(h, `holidays[${i}]`))));
 }
 
-function intField(body: Record<string, unknown>, key: string, max = 1_000_000): number {
+/** Working days of the week as flags indexed by getUTCDay() (0 = Sunday). */
+export type Workweek = readonly boolean[];
+export const MON_FRI: Workweek = [false, true, true, true, true, true, false];
+
+/** workdays: weekday numbers 0–6 (0 = Sunday). Default Mon–Fri. */
+export function parseWorkdays(value: unknown): Workweek {
+  if (value === undefined || value === null) return MON_FRI;
+  if (!Array.isArray(value) || value.length === 0 || value.length > 7 || value.some((d) => !Number.isInteger(d) || d < 0 || d > 6)) {
+    throw new InputError("invalid_workdays", "workdays must be an array of weekday numbers 0–6 (0 = Sunday), e.g. [1,2,3,4,5] for Mon–Fri, [0,1,2,3,4] for Sun–Thu, [1,2,3,4,5,6] for Mon–Sat");
+  }
+  const w = Array<boolean>(7).fill(false);
+  for (const d of value as number[]) w[d] = true;
+  return w;
+}
+
+export function intField(body: Record<string, unknown>, key: string, max = 1_000_000): number {
   const v = body[key];
   if (v === undefined || v === null) return 0;
   if (typeof v !== "number" || !Number.isInteger(v) || Math.abs(v) > max) {
@@ -99,55 +114,50 @@ function addMonths(d: Date, months: number): Date {
   return new Date(Date.UTC(ty, tm, day, d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds(), d.getUTCMilliseconds()));
 }
 
-function isBusinessDay(d: Date, holidays: Set<string>): boolean {
-  const wd = d.getUTCDay();
-  return wd !== 0 && wd !== 6 && !holidays.has(fmtDate(d));
+export function isBusinessDay(d: Date, holidays: Set<string>, ww: Workweek = MON_FRI): boolean {
+  return ww[d.getUTCDay()] && !holidays.has(fmtDate(d));
 }
 
-const isWeekdayMs = (ms: number) => {
-  const wd = new Date(ms).getUTCDay();
-  return wd !== 0 && wd !== 6;
-};
+const isWorkdayMs = (ms: number, ww: Workweek) => ww[new Date(ms).getUTCDay()];
+const perWeek = (ww: Workweek) => ww.filter(Boolean).length;
 
-/** Holidays (as UTC-midnight ms) that fall on a weekday. */
-function weekdayHolidayMs(holidays: Set<string>): number[] {
-  return [...holidays].map((h) => Date.parse(h + "T00:00:00Z")).filter(isWeekdayMs);
+/** Holidays (as UTC-midnight ms) that fall on a working day. */
+function workdayHolidayMs(holidays: Set<string>, ww: Workweek): number[] {
+  return [...holidays].map((h) => Date.parse(h + "T00:00:00Z")).filter((ms) => isWorkdayMs(ms, ww));
 }
 
-/** Weekdays in [lo, hi) in O(1): 5 per full week plus the remainder. lo/hi are UTC midnights. */
-export function weekdaysBetween(loMs: number, hiMs: number): number {
+/** Working days in [lo, hi) in O(1): perWeek per full week plus the remainder. lo/hi are UTC midnights. */
+export function weekdaysBetween(loMs: number, hiMs: number, ww: Workweek = MON_FRI): number {
   const days = Math.round((hiMs - loMs) / DAY_MS);
-  let count = Math.floor(days / 7) * 5;
+  let count = Math.floor(days / 7) * perWeek(ww);
   const startDow = new Date(loMs).getUTCDay();
-  for (let i = 0; i < days % 7; i++) {
-    const dow = (startDow + i) % 7;
-    if (dow !== 0 && dow !== 6) count++;
-  }
+  for (let i = 0; i < days % 7; i++) if (ww[(startDow + i) % 7]) count++;
   return count;
 }
 
-/** Move n weekdays (no holidays) from d, counting the days stepped onto. O(1): whole weeks, then at most ~11 steps. */
-function addWeekdays(ms: number, n: number): number {
+/** Move n working days (no holidays) from d, counting the days stepped onto. O(1): whole weeks, then at most ~13 steps. */
+function addWeekdays(ms: number, n: number, ww: Workweek): number {
   const step = n > 0 ? 1 : -1;
-  let weeks = Math.floor(Math.abs(n) / 5);
-  let rem = Math.abs(n) % 5;
+  const pw = perWeek(ww);
+  let weeks = Math.floor(Math.abs(n) / pw);
+  let rem = Math.abs(n) % pw;
   if (rem === 0 && weeks > 0) {
-    weeks--; // land on a weekday, never a weekend
-    rem = 5;
+    weeks--; // land on a working day, never a rest day
+    rem = pw;
   }
   ms += step * weeks * 7 * DAY_MS;
   while (rem > 0) {
     ms += step * DAY_MS;
-    if (isWeekdayMs(ms)) rem--;
+    if (isWorkdayMs(ms, ww)) rem--;
   }
   return ms;
 }
 
-/** Add n business days (skipping weekends and holidays). Work is bounded by holiday count, not n. */
-export function addBusinessDays(ms: number, n: number, holidays: Set<string>): number {
-  const hol = weekdayHolidayMs(holidays);
+/** Add n business days (skipping rest days and holidays). Work is bounded by holiday count, not n. */
+export function addBusinessDays(ms: number, n: number, holidays: Set<string>, ww: Workweek = MON_FRI): number {
+  const hol = workdayHolidayMs(holidays, ww);
   while (n !== 0) {
-    const target = addWeekdays(ms, n);
+    const target = addWeekdays(ms, n, ww);
     // Holidays stepped over in this segment each cost one extra business day.
     const missed = n > 0 ? hol.filter((h) => h > ms && h <= target).length : hol.filter((h) => h < ms && h >= target).length;
     ms = target;
@@ -321,6 +331,7 @@ export function diff(body: Record<string, unknown>) {
   const b = parseDateOrDateTime(body.to, "to");
   if (a.hasTime !== b.hasTime) throw new InputError("mixed_formats", "from and to must both be dates or both be datetimes");
   const holidays = parseHolidays(body.holidays);
+  const ww = parseWorkdays(body.workdays);
   if (body.country !== undefined && !a.hasTime) {
     const [y1, y2] = [a.date.getUTCFullYear(), b.date.getUTCFullYear()].sort((x, y) => x - y);
     for (const h of countryHolidayDates(body.country, y1, y2)) holidays.add(h);
@@ -342,8 +353,8 @@ export function diff(body: Record<string, unknown>) {
 
   if (!a.hasTime) {
     const [l, h] = [lo.getTime(), hi.getTime()];
-    const hol = weekdayHolidayMs(holidays).filter((x) => x >= l && x < h).length;
-    result.business_days = sign * (weekdaysBetween(l, h) - hol); // counts [from, to): start inclusive, end exclusive
+    const hol = workdayHolidayMs(holidays, ww).filter((x) => x >= l && x < h).length;
+    result.business_days = sign * (weekdaysBetween(l, h, ww) - hol); // counts [from, to): start inclusive, end exclusive
   } else {
     result.total_hours = sign * Math.floor(ms / 3_600_000);
     result.total_minutes = sign * Math.floor(ms / 60_000);
@@ -377,6 +388,7 @@ export function add(body: Record<string, unknown>) {
   const seconds = intField(body, "seconds", 1_000_000_000);
   const businessDays = intField(body, "business_days", MAX_BUSINESS_DAYS);
   const holidays = parseHolidays(body.holidays);
+  const ww = parseWorkdays(body.workdays);
 
   if (!hasTime && (hours || minutes || seconds)) {
     throw new InputError("time_on_date", "hours/minutes/seconds require a datetime input, e.g. 2026-11-07T00:00:00Z");
@@ -392,12 +404,12 @@ export function add(body: Record<string, unknown>) {
     const [y1, y2] = businessDays >= 0 ? [y, y + span] : [y - span, y];
     for (const h of countryHolidayDates(body.country, y1, y2)) holidays.add(h);
   }
-  if (businessDays) d = new Date(addBusinessDays(d.getTime(), businessDays, holidays));
+  if (businessDays) d = new Date(addBusinessDays(d.getTime(), businessDays, holidays, ww));
   d = new Date(d.getTime() + hours * 3_600_000 + minutes * 60_000 + seconds * 1000);
   if (Number.isNaN(d.getTime()) || Math.abs(d.getUTCFullYear()) > 275_000) throw new InputError("out_of_range", "result is out of range");
 
   const out = hasTime ? d.toISOString().replace(".000Z", "Z") : fmtDate(d);
-  return { input: body.date, result: out, weekday: WEEKDAYS[d.getUTCDay()], is_business_day: isBusinessDay(d, holidays) };
+  return { input: body.date, result: out, weekday: WEEKDAYS[d.getUTCDay()], is_business_day: isBusinessDay(d, holidays, ww) };
 }
 
 export function convert(body: Record<string, unknown>) {

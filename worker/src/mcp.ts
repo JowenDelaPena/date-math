@@ -2,7 +2,16 @@
 // Clients pay with an x402-aware MCP client (e.g. @x402/mcp createx402MCPClient); payment rides in _meta.
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import {
+  CallToolRequestSchema,
+  CallToolResultSchema,
+  InitializeRequestSchema,
+  JSONRPCMessageSchema,
+  LATEST_PROTOCOL_VERSION,
+  ListToolsRequestSchema,
+  ListToolsResultSchema,
+  SUPPORTED_PROTOCOL_VERSIONS,
+} from "@modelcontextprotocol/sdk/types.js";
 import { createPaymentWrapper } from "@x402/mcp";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 import { ORIGIN, VERSION } from "./app";
@@ -27,7 +36,7 @@ function runTool(t: Tool, args: Record<string, unknown>): ToolResult {
     const out = t.run(args ?? {}) as Record<string, unknown>;
     return { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out };
   } catch (e) {
-    const err = e instanceof InputError ? { code: e.code, message: e.message } : { code: "internal_error", message: "unexpected error" };
+    const err = e instanceof InputError ? { code: e.code, message: e.message, example: t.example } : { code: "internal_error", message: "unexpected error" };
     return { content: [{ type: "text", text: JSON.stringify({ error: err }) }], isError: true };
   }
 }
@@ -83,9 +92,15 @@ function priceNote(price: string | null, free: number): string {
   return free ? ` First ${free} calls per day are free, then ${price} per call (x402).` : ` Costs ${price} per call (x402).`;
 }
 
-function buildServer(p: Payments | null, free: number, takeFree: (() => Promise<number>) | null): Server {
+const SERVER_INFO = { name: "date-math", title: "Date Math", version: VERSION };
+
+function instructionsFor(p: Payments | null, free: number): string {
   const cost = !p ? "Tool calls are free." : free ? `The first ${free} tool calls per day are free; after that each call costs ${p.cfg.PRICE} (x402, USDC on Base).` : `Each tool call costs ${p.cfg.PRICE} (x402, USDC on Base).`;
-  const server = new Server({ name: "date-math", title: "Date Math", version: VERSION }, { capabilities: { tools: {} }, instructions: `Exact date/time math. ${cost} Docs: ${ORIGIN}/llms.txt` });
+  return `Exact date/time math. ${cost} Docs: ${ORIGIN}/llms.txt`;
+}
+
+function buildServer(p: Payments | null, free: number, takeFree: (() => Promise<number>) | null): Server {
+  const server = new Server(SERVER_INFO, { capabilities: { tools: {} }, instructions: instructionsFor(p, free) });
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: toolList(p?.cfg.PRICE ?? null, free) as any }));
 
@@ -111,7 +126,65 @@ function buildServer(p: Payments | null, free: number, takeFree: (() => Promise<
   return server;
 }
 
-export async function handleMcp(request: Request, env: McpEnv): Promise<Response> {
+type Json = Record<string, any>;
+const isObj = (v: unknown): v is Json => typeof v === "object" && v !== null && !Array.isArray(v);
+
+/**
+ * Fast path for the hot, simple MCP messages: initialize, ping, notifications, tools/list, and tool calls that are
+ * free (payments off, or covered by the free tier). It answers exactly like the SDK (same JSON shape and headers)
+ * without building an SDK Server/transport per request, which cost 15–30 ms CPU on each fresh isolate.
+ * Returns null for anything else (paid calls, batches, odd input), which then goes through the full SDK.
+ */
+async function fastPath(request: Request, p: Payments | null, free: number, takeFree: (() => Promise<number>) | null, onFreeExhausted: () => void): Promise<Response | null> {
+  const accept = request.headers.get("Accept") ?? "";
+  if (!accept.includes("application/json") || !accept.includes("text/event-stream")) return null;
+  if (!(request.headers.get("Content-Type") ?? "").includes("application/json")) return null;
+  const version = request.headers.get("MCP-Protocol-Version");
+  if (version && !SUPPORTED_PROTOCOL_VERSIONS.includes(version)) return null;
+
+  let msg: unknown;
+  try {
+    msg = await request.clone().json();
+  } catch {
+    return null;
+  }
+  if (!isObj(msg) || msg.jsonrpc !== "2.0" || typeof msg.method !== "string") return null;
+  if (!("id" in msg)) return msg.method.startsWith("notifications/") ? new Response(null, { status: 202 }) : null;
+  if (typeof msg.id !== "string" && typeof msg.id !== "number") return null;
+  const params = msg.params === undefined ? {} : msg.params;
+  if (!isObj(params)) return null;
+  const reply = (result: unknown) => new Response(JSON.stringify({ result, jsonrpc: "2.0", id: msg.id }), { headers: { "content-type": "application/json" } });
+
+  switch (msg.method) {
+    case "initialize": {
+      const v = params.protocolVersion;
+      if (typeof v !== "string" || !isObj(params.capabilities) || !isObj(params.clientInfo)) return null;
+      const protocolVersion = SUPPORTED_PROTOCOL_VERSIONS.includes(v) ? v : LATEST_PROTOCOL_VERSION;
+      return reply({ protocolVersion, capabilities: { tools: {} }, serverInfo: SERVER_INFO, instructions: instructionsFor(p, free) });
+    }
+    case "ping":
+      return reply({});
+    case "tools/list":
+      return reply({ tools: toolList(p?.cfg.PRICE ?? null, free) });
+    case "tools/call": {
+      const args = params.arguments === undefined ? {} : params.arguments;
+      if (typeof params.name !== "string" || !isObj(args)) return null;
+      const t = TOOLS.find((x) => x.name === params.name);
+      if (!t) return reply({ content: [{ type: "text", text: `unknown tool: ${params.name}` }], isError: true });
+      if (!p) return reply(runTool(t, args));
+      if (!takeFree || (isObj(params._meta) && params._meta["x402/payment"])) return null; // paid: x402 via the SDK
+      const left = await takeFree();
+      if (left < 0) {
+        onFreeExhausted(); // nothing was taken; let the SDK path ask for payment without re-checking the quota
+        return null;
+      }
+      return reply({ ...runTool(t, args), _meta: { [FREE_META]: left } });
+    }
+  }
+  return null;
+}
+
+export async function handleMcp(request: Request, env: McpEnv, opts: { sdkOnly?: boolean } = {}): Promise<Response> {
   if (request.method === "GET" || request.method === "DELETE") {
     // Stateless server: no standalone SSE stream or sessions.
     return new Response(JSON.stringify({ jsonrpc: "2.0", error: { code: -32000, message: "Method not allowed: POST JSON-RPC to /mcp" }, id: null }), {
@@ -120,9 +193,39 @@ export async function handleMcp(request: Request, env: McpEnv): Promise<Response
     });
   }
   const p = getPayments(env);
-  const takeFree = p ? freeTaker(env.FREE_QUOTA, env.FREE_CALLS_PER_DAY, request) : null;
-  const server = buildServer(p, takeFree ? freeLimit(env.FREE_CALLS_PER_DAY) : 0, takeFree);
+  let takeFree = p ? freeTaker(env.FREE_QUOTA, env.FREE_CALLS_PER_DAY, request) : null;
+  const free = takeFree ? freeLimit(env.FREE_CALLS_PER_DAY) : 0;
+  if (!opts.sdkOnly) {
+    const fast = await fastPath(request, p, free, takeFree, () => (takeFree = null));
+    if (fast) return fast;
+  }
+  const server = buildServer(p, free, takeFree);
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   await server.connect(transport);
   return transport.handleRequest(request);
+}
+
+// ---- Startup warm-up ----
+// Cloudflare runs many isolates, and each one's first MCP request used to pay 20–60 ms of one-time setup
+// (resolving schemas, zod compiling the MCP message schemas, JIT of the tools). Startup has its own, larger
+// CPU budget than a request, so do that work here and keep requests at a few ms on the free plan.
+for (const t of TOOLS) {
+  inputSchemaFor(t.path);
+  outputSchemaFor(t.path);
+  try {
+    t.run(t.example);
+  } catch {
+    // examples are tested; never let warm-up break startup
+  }
+}
+toolList("$0.001", 25);
+{
+  const base = { jsonrpc: "2.0", id: 0 };
+  const call = { ...base, method: "tools/call", params: { name: "date_info", arguments: { date: "2026-01-01" } } };
+  JSONRPCMessageSchema.safeParse(call);
+  CallToolRequestSchema.safeParse(call);
+  ListToolsRequestSchema.safeParse({ ...base, method: "tools/list", params: {} });
+  InitializeRequestSchema.safeParse({ ...base, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "warm", version: "1" } } });
+  CallToolResultSchema.safeParse(runTool(TOOLS[0], TOOLS[0].example));
+  ListToolsResultSchema.safeParse({ tools: toolList("$0.001", 25) });
 }

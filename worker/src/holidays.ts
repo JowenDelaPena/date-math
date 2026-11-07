@@ -54,3 +54,13 @@ export function countryHolidayDates(country: unknown, fromYear: number, toYear: 
   }
   return set;
 }
+
+/** Public holidays (YYYY-MM-DD -> name) for a country across [fromYear, toYear], clamped to the data range. */
+export function countryHolidayNames(country: unknown, fromYear: number, toYear: number): Map<string, string> {
+  const code = countryCode(country);
+  const map = new Map<string, string>();
+  for (let y = Math.max(fromYear, DB.years[0]); y <= Math.min(toYear, DB.years[1]); y++) {
+    for (const [md, n] of DB.countries[code].days[String(y)] ?? []) map.set(`${y}-${md}`, DB.names[n]);
+  }
+  return map;
+}

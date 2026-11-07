@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "../src/index";
+import { handleMcp } from "../src/mcp";
 import { clientKey, FreeQuota, freeLimit } from "../src/quota";
 
 const ctx = { waitUntil() {}, passThroughOnException() {}, props: {} };
@@ -22,12 +23,12 @@ async function rpc(method: string, params: unknown, env: Record<string, unknown>
 }
 
 describe("MCP (payments off)", () => {
-  it("initializes and lists 11 tools with schemas", async () => {
+  it("initializes and lists every tool with schemas", async () => {
     const init = await rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "1" } });
     expect(init.result.serverInfo.name).toBe("date-math");
     const list = await rpc("tools/list", {});
     expect(list.result.tools.map((t: any) => t.name)).toEqual([
-      "date_diff", "date_add", "timezone_convert", "date_info", "public_holidays", "working_hours_overlap", "cron_schedule", "parse_date_text", "city_time", "recurring_dates", "business_hours_deadline",
+      "date_diff", "date_add", "timezone_convert", "date_info", "public_holidays", "working_hours_overlap", "cron_schedule", "parse_date_text", "city_time", "recurring_dates", "business_hours_deadline", "business_day", "pay_dates",
     ]);
     for (const t of list.result.tools) {
       expect(t.inputSchema.type).toBe("object");
@@ -192,5 +193,43 @@ describe("quota helpers", () => {
     expect(freeLimit("10")).toBe(10);
     expect(freeLimit("0")).toBe(0);
     expect(freeLimit("abc")).toBe(0);
+  });
+});
+
+describe("MCP fast path matches the SDK", () => {
+  const H = { "Content-Type": "application/json", Accept: "application/json, text/event-stream", "MCP-Protocol-Version": "2025-06-18" };
+  const both = async (msg: unknown, env: Record<string, unknown>) => {
+    const make = () => new Request("https://x/mcp", { method: "POST", headers: H, body: JSON.stringify(msg) });
+    const [fast, sdk] = [await handleMcp(make(), env as any), await handleMcp(make(), env as any, { sdkOnly: true })];
+    const read = async (r: Response) => ({ status: r.status, type: r.headers.get("content-type"), body: r.status === 202 ? null : await r.json() });
+    return [await read(fast), await read(sdk)];
+  };
+  const PAID_ENV_ = { PAY_TO: "0x000000000000000000000000000000000000dEaD", X402_NETWORK: "eip155:84532", FACILITATOR_URL: "https://facilitator.test" };
+  const cases: [string, unknown][] = [
+    ["initialize", { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "t", version: "1" } } }],
+    ["initialize, unknown version", { jsonrpc: "2.0", id: 2, method: "initialize", params: { protocolVersion: "1999-01-01", capabilities: {}, clientInfo: { name: "t", version: "1" } } }],
+    ["ping", { jsonrpc: "2.0", id: "p", method: "ping" }],
+    ["notification", { jsonrpc: "2.0", method: "notifications/initialized" }],
+    ["tools/list", { jsonrpc: "2.0", id: 3, method: "tools/list", params: {} }],
+    ["tools/call", { jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "business_day", arguments: { date: "2026-12-25", country: "PH" } } }],
+    ["tools/call error", { jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "pay_dates", arguments: { schedule: "daily" } } }],
+    ["unknown tool", { jsonrpc: "2.0", id: 6, method: "tools/call", params: { name: "nope", arguments: {} } }],
+  ];
+  for (const [label, msg] of cases) {
+    it(`${label} (payments off)`, async () => {
+      const [fast, sdk] = await both(msg, {});
+      expect(fast).toEqual(sdk);
+    });
+  }
+  it("initialize and tools/list (payments on, free tier)", async () => {
+    vi.stubGlobal("fetch", async () => new Response(JSON.stringify({ kinds: [{ x402Version: 2, scheme: "exact", network: "eip155:84532" }], extensions: [], signers: {} }), { headers: { "Content-Type": "application/json" } }));
+    try {
+      for (const [, msg] of cases.slice(0, 5)) {
+        const [fast, sdk] = await both(msg, { ...PAID_ENV_, FREE_QUOTA: { idFromName: (n: string) => n, get: () => ({ fetch: async () => Response.json({ remaining: 1 }) }) } });
+        expect(fast).toEqual(sdk);
+      }
+    } finally {
+      vi.stubGlobal("fetch", realFetch);
+    }
   });
 });
