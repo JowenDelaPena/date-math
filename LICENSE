@@ -20,4 +20,3 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Holiday data: derived from date-holidays by commenthol and contributors (code ISC; holiday data CC BY 3.0, https://github.com/commenthol/date-holidays). City data: derived from city-timezones (MIT), based on Natural Earth (public domain).

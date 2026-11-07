@@ -1,0 +1,6 @@
+Date Math
+Copyright (c) 2026 JowenDelaPena. Code licensed under the MIT License (see LICENSE).
+
+Third-party data:
+- Holiday data: derived from date-holidays by commenthol and contributors (code ISC; holiday data CC BY 3.0, https://github.com/commenthol/date-holidays).
+- City data: derived from city-timezones (MIT, https://github.com/kevinroberts/city-timezones), based on Natural Earth (public domain).

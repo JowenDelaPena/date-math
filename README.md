@@ -197,7 +197,7 @@ To check that it can actually take payments (HTTP and MCP, the way agents pay), 
 
 ## Data and license
 
-- **Code:** MIT, see [LICENSE](LICENSE).
+- **Code:** MIT, see [LICENSE](LICENSE). Third-party data notices are in [NOTICE](NOTICE).
 - **Holiday data:** derived from [date-holidays](https://github.com/commenthol/date-holidays) (CC BY 3.0). Lunar or government-proclaimed dates are rule-based estimates.
 - **City data:** derived from [city-timezones](https://github.com/kevinroberts/city-timezones) (MIT), based on Natural Earth (public domain).
 
