@@ -18,3 +18,8 @@ tail.err
 
 # Maintainer-only notes and Pocket configs (kept local)
 private/
+
+# MCP Registry publisher binary and its login token
+mcp-publisher.exe
+mcp-publisher.tar.gz
+.mcpregistry_*

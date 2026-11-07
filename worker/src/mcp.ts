@@ -8,9 +8,18 @@ import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 import { ORIGIN, VERSION } from "./app";
 import { InputError } from "./errors";
 import { getPayments, inputSchemaFor, outputSchemaFor, type Env, type Payments } from "./payments";
+import { freeLimit, freeTaker, type QuotaNamespace } from "./quota";
 import { TOOLS, type Tool } from "./tools";
 
-type ToolResult = { content: { type: "text"; text: string }[]; structuredContent?: Record<string, unknown>; isError?: boolean };
+type ToolResult = { content: { type: "text"; text: string }[]; structuredContent?: Record<string, unknown>; isError?: boolean; _meta?: Record<string, unknown> };
+
+/** Result _meta key carrying how many free calls this client has left today (index.ts logs these as "free_tier"). */
+export const FREE_META = "date-math/free_calls_remaining";
+
+export interface McpEnv extends Env {
+  FREE_QUOTA?: QuotaNamespace; // Durable Object binding (wrangler.toml); unset = no free tier
+  FREE_CALLS_PER_DAY?: string; // free MCP tool calls per IP per UTC day; default 25, "0" = off
+}
 type Handler = (args: Record<string, unknown>, extra: Record<string, unknown>) => Promise<ToolResult>;
 
 function runTool(t: Tool, args: Record<string, unknown>): ToolResult {
@@ -52,14 +61,14 @@ async function paidHandlers(p: Payments): Promise<Map<string, Handler>> {
 
 // Tool listings are static per price: build once per isolate (schema $ref resolution is the expensive part).
 const listCache = new Map<string, unknown[]>();
-function toolList(price: string | null) {
-  const key = price ?? "";
+function toolList(price: string | null, free: number) {
+  const key = `${price ?? ""}|${free}`;
   let tools = listCache.get(key);
   if (!tools) {
     tools = TOOLS.map((t) => ({
       name: t.name,
       title: t.title,
-      description: `${t.description}${price ? ` Costs ${price} per call (x402).` : ""}`,
+      description: `${t.description}${priceNote(price, free)}`,
       inputSchema: { type: "object" as const, ...inputSchemaFor(t.path) },
       outputSchema: { type: "object" as const, ...outputSchemaFor(t.path) },
       annotations: { readOnlyHint: true, openWorldHint: false, idempotentHint: true },
@@ -69,16 +78,27 @@ function toolList(price: string | null) {
   return tools;
 }
 
-function buildServer(p: Payments | null): Server {
-  const server = new Server({ name: "date-math", title: "Date Math", version: VERSION }, { capabilities: { tools: {} }, instructions: `Exact date/time math. Each tool call costs ${p?.cfg.PRICE ?? "nothing"}${p ? " (x402, USDC on Base)" : ""}. Docs: ${ORIGIN}/llms.txt` });
+function priceNote(price: string | null, free: number): string {
+  if (!price) return "";
+  return free ? ` First ${free} calls per day are free, then ${price} per call (x402).` : ` Costs ${price} per call (x402).`;
+}
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: toolList(p?.cfg.PRICE ?? null) as any }));
+function buildServer(p: Payments | null, free: number, takeFree: (() => Promise<number>) | null): Server {
+  const cost = !p ? "Tool calls are free." : free ? `The first ${free} tool calls per day are free; after that each call costs ${p.cfg.PRICE} (x402, USDC on Base).` : `Each tool call costs ${p.cfg.PRICE} (x402, USDC on Base).`;
+  const server = new Server({ name: "date-math", title: "Date Math", version: VERSION }, { capabilities: { tools: {} }, instructions: `Exact date/time math. ${cost} Docs: ${ORIGIN}/llms.txt` });
+
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: toolList(p?.cfg.PRICE ?? null, free) as any }));
 
   server.setRequestHandler(CallToolRequestSchema, async (req, extra) => {
     const t = TOOLS.find((x) => x.name === req.params.name);
     if (!t) return { content: [{ type: "text", text: `unknown tool: ${req.params.name}` }], isError: true };
     const args = (req.params.arguments ?? {}) as Record<string, unknown>;
     if (!p) return runTool(t, args);
+    // Free tier: only when the client sent no payment (a paying client never burns free calls).
+    if (takeFree && !req.params._meta?.["x402/payment"]) {
+      const left = await takeFree();
+      if (left >= 0) return { ...runTool(t, args), _meta: { [FREE_META]: left } };
+    }
     let handlers: Map<string, Handler>;
     try {
       handlers = await paidHandlers(p);
@@ -91,7 +111,7 @@ function buildServer(p: Payments | null): Server {
   return server;
 }
 
-export async function handleMcp(request: Request, env: Env): Promise<Response> {
+export async function handleMcp(request: Request, env: McpEnv): Promise<Response> {
   if (request.method === "GET" || request.method === "DELETE") {
     // Stateless server: no standalone SSE stream or sessions.
     return new Response(JSON.stringify({ jsonrpc: "2.0", error: { code: -32000, message: "Method not allowed: POST JSON-RPC to /mcp" }, id: null }), {
@@ -99,7 +119,9 @@ export async function handleMcp(request: Request, env: Env): Promise<Response> {
       headers: { "Content-Type": "application/json", Allow: "POST" },
     });
   }
-  const server = buildServer(getPayments(env));
+  const p = getPayments(env);
+  const takeFree = p ? freeTaker(env.FREE_QUOTA, env.FREE_CALLS_PER_DAY, request) : null;
+  const server = buildServer(p, takeFree ? freeLimit(env.FREE_CALLS_PER_DAY) : 0, takeFree);
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   await server.connect(transport);
   return transport.handleRequest(request);

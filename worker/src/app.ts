@@ -43,7 +43,7 @@ app.get("/", (c) =>
     version: VERSION,
     description: "Deterministic date and time math for AI agents. POST a JSON body; every response is a JSON object.",
     spec: "/openapi.json",
-    mcp: `${ORIGIN}/mcp (Streamable HTTP; tools are paid per call via x402 MCP)`,
+    mcp: `${ORIGIN}/mcp (Streamable HTTP; first 25 tool calls per day free, then paid per call via x402 MCP)`,
     endpoints: Object.fromEntries(TOOLS.map((t) => [`POST ${t.path}`, { mcp_tool: t.name, description: t.description, example: t.example }])),
     free: ["GET /v1/version", "GET /v1/health", "GET /openapi.json", "GET /llms.txt", "GET /.well-known/x402"],
     errors: '{"error":{"code","message"}} with HTTP 400/404/413',
@@ -68,7 +68,7 @@ const LLMS_TXT = `# Date Math
 
 Base URL: ${ORIGIN}
 Payment: x402 v2, $0.001 per call in USDC on Base (eip155:8453). An unpaid call returns HTTP 402 with terms in the PAYMENT-REQUIRED header; pay and retry with PAYMENT-SIGNATURE. Any x402 client (e.g. @x402/fetch) handles this automatically.
-MCP: ${ORIGIN}/mcp (Streamable HTTP). Same tools, paid per call via x402 MCP (e.g. @x402/mcp client).
+MCP: ${ORIGIN}/mcp (Streamable HTTP). Same tools. The first 25 tool calls per day per IP are free, so any MCP client can try them; after that, calls are paid via x402 MCP (e.g. @x402/mcp client). Plain HTTP calls are always paid.
 All HTTP calls: POST a JSON body, get a JSON object back. Errors: {"error":{"code","message"}}.
 
 ## Tools

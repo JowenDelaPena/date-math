@@ -3,6 +3,7 @@
 **Exact date and time math for AI agents, paid per call.** LLMs are unreliable at business days, DST, recurring schedules and holiday calendars. Date Math gives them deterministic answers over HTTP or MCP.
 
 - **Price:** $0.001 per call in USDC on Base, via [x402](https://x402.org)
+- **Free to try:** 25 free MCP tool calls per day, works in any MCP app (Claude Desktop, Cursor, ...)
 - **Access:** no signup, no API keys
 - **Base URL:** `https://date-math.datemath.workers.dev`
 - **MCP endpoint:** `https://date-math.datemath.workers.dev/mcp` (Streamable HTTP)
@@ -69,7 +70,8 @@ The wallet needs USDC on Base. No ETH is required, because the facilitator pays 
 
 - **Endpoint:** `https://date-math.datemath.workers.dev/mcp` (Streamable HTTP, stateless)
 - **Listing tools** (`tools/list`) is free.
-- **Each tool call** costs $0.001 via x402 MCP. Payment travels in the tool call's `_meta`, and x402-aware clients handle it automatically:
+- **The first 25 tool calls per day are free** (per IP, reset at 00:00 UTC). Each free result carries `_meta["date-math/free_calls_remaining"]`.
+- **After that, each tool call** costs $0.001 via x402 MCP. Payment travels in the tool call's `_meta`, and x402-aware clients handle it automatically:
 
 ```ts
 import { createx402MCPClient } from "@x402/mcp";
@@ -85,7 +87,9 @@ await client.connect(new StreamableHTTPClientTransport(new URL("https://date-mat
 const r = await client.callTool("public_holidays", { country: "US", year: 2026 });
 ```
 
-MCP clients without x402 support can list the tools, but calls return "Payment required".
+MCP clients without x402 support can use the free daily calls; after those, calls return "Payment required". A client that attaches a payment never uses up free calls.
+
+The free tier is MCP only. Plain HTTP calls always need payment (an unpaid call returns 402), because x402 discovery services check for that.
 
 ## Run your own copy
 
@@ -94,7 +98,7 @@ The service is a single Cloudflare Worker and fits the free plan: every tool use
 ```bash
 cd worker
 npm install
-npm test                 # 99 tests
+npm test                 # 108 tests
 npx wrangler login
 npx wrangler deploy
 ```
@@ -107,6 +111,7 @@ Set your own wallet and price in [`worker/wrangler.toml`](worker/wrangler.toml):
 | `PRICE` | Price per call, e.g. `$0.001` |
 | `X402_NETWORK` | `eip155:8453` (Base) or `eip155:84532` (Base Sepolia, for testing) |
 | `FACILITATOR_URL` | Defaults to PayAI: no key needed, and it pays gas |
+| `FREE_CALLS_PER_DAY` | Free MCP tool calls per IP per day (default `25`, `0` turns it off). Counters live in the `FREE_QUOTA` Durable Object. |
 
 Optional secrets (set with `npx wrangler secret put`):
 - **`CDP_API_KEY_ID`, `CDP_API_KEY_SECRET`:** settle through Coinbase's facilitator first.

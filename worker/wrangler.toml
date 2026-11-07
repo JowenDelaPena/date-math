@@ -13,6 +13,7 @@ PRICE = "$0.001"                                   # per call
 X402_NETWORK = "eip155:8453"                       # Base mainnet (test: eip155:84532 = Base Sepolia)
 FACILITATOR_URL = "https://facilitator.payai.network"  # supports x402 v2 exact on Base mainnet, no API key
 PUBLIC_URL = "https://date-math.datemath.workers.dev"
+FREE_CALLS_PER_DAY = "25"                          # free MCP tool calls per IP per UTC day (src/quota.ts); "0" = off
 
 # Secret (not in this file): free path for Pocket suppliers' RelayMiners.
 #   npx wrangler secret put POCKET_PREFIX
@@ -20,3 +21,12 @@ PUBLIC_URL = "https://date-math.datemath.workers.dev"
 # Cloudflare build only: skip x402's Ajv-based route validation (needs `new Function`, blocked on Workers). See src/shims/bazaar.ts.
 [alias]
 "@x402/extensions/bazaar" = "./src/shims/bazaar.ts"
+
+# Free MCP tier counters: one SQLite-backed Durable Object per client IP (Workers Free plan supports these).
+[[durable_objects.bindings]]
+name = "FREE_QUOTA"
+class_name = "FreeQuota"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["FreeQuota"]

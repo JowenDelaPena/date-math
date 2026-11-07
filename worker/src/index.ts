@@ -2,7 +2,7 @@
 //
 // Three ways in:
 //  1. Direct:  https://<host>/v1/...                 -> x402 pay-per-call (when PAY_TO is set)
-//  2. MCP:     https://<host>/mcp                    -> same tools, x402 over MCP
+//  2. MCP:     https://<host>/mcp                    -> same tools, x402 over MCP, with a small free daily tier (quota.ts)
 //  3. Pocket:  https://<host>/<POCKET_PREFIX>/v1/... -> free, for Pocket suppliers' RelayMiners
 //     (they are paid on-chain by Pocket). POCKET_PREFIX is a secret: wrangler secret put POCKET_PREFIX
 //
@@ -10,11 +10,15 @@
 // Observability (Workers Logs). Query e.g. `evt = "call"` and group by path/outcome. No request bodies are logged.
 import type { ExecutionContext } from "hono";
 import { api } from "./app";
-import { handleMcp } from "./mcp";
-import { paidApp, type Env } from "./payments";
+import { FREE_META, handleMcp, type McpEnv } from "./mcp";
+import { paidApp } from "./payments";
+import { FreeQuota } from "./quota";
 import { PAID_PATHS } from "./tools";
 
-interface WorkerEnv extends Env {
+// The one named export besides default: Durable Object classes must be exported from the entry module.
+export { FreeQuota };
+
+interface WorkerEnv extends McpEnv {
   POCKET_PREFIX?: string;
 }
 
@@ -59,7 +63,7 @@ export default {
       if (method === "tools/call") {
         // MCP payment status lives in the JSON-RPC result; HTTP status is 200 either way.
         const text = await res.clone().text();
-        const result = text.includes('"isError":true') ? (text.includes("Payment required") ? "unpaid" : "tool_error") : "paid";
+        const result = text.includes('"isError":true') ? (text.includes("Payment required") ? "unpaid" : "tool_error") : text.includes(FREE_META) ? "free_tier" : "paid";
         log({ via: "mcp", path: tool ?? "?", status: res.status, outcome: result, ms: Date.now() - started });
       } else if (method === "tools/list") log({ via: "mcp", path: "tools/list", status: res.status, outcome: "free", ms: Date.now() - started });
       return res;
