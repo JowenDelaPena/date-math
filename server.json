@@ -2,12 +2,12 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.JowenDelaPena/date-math",
   "title": "Date Math",
-  "description": "Exact date/time math for agents: business days, holidays, time zones, cron, RRULE, SLA. x402 paid.",
+  "description": "Date/time math for agents: business days, holidays, time zones, cron, RRULE. 25 free calls/day.",
   "repository": {
     "url": "https://github.com/JowenDelaPena/date-math",
     "source": "github"
   },
-  "version": "1.2.0",
+  "version": "1.3.0",
   "remotes": [
     {
       "type": "streamable-http",

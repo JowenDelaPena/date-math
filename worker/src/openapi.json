@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Date Math",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "description": "Deterministic date and time math for AI agents: date differences, business days, date arithmetic, time zone conversion and calendar facts. Paid per call via x402 (USDC on Base, $0.001); probes and spec are free. All inputs are JSON bodies; all responses are JSON objects. Errors return {\"error\":{\"code\",\"message\"}}.",
     "x-guidance": "Date Math does exact date and time arithmetic so you don't have to. Every tool is POST with a JSON body, returns a JSON object, and costs $0.001 (x402, USDC on Base). POST /v1/diff: days/weeks/months/business days between two dates (pass country, e.g. \"US\", to skip its public holidays). POST /v1/add: the date N days/weeks/months/business days before or after a date. POST /v1/convert: a time in another IANA time zone (DST-aware). POST /v1/info: weekday, ISO week, quarter or leap-year status of a date. POST /v1/holidays: a country's public holidays for a year. POST /v1/overlap: when working hours overlap across time zones (meeting slots). POST /v1/cron: explain a cron expression and list its next runs. POST /v1/parse: turn text like \"next Friday at 3pm\" into an exact datetime. POST /v1/city: the time zone and local time of a city by name. POST /v1/recurrence: concrete dates for an iCal RRULE (\"every 2nd Tuesday\"). POST /v1/business_hours: SLA deadline N working hours from now, or working hours elapsed. Dates are YYYY-MM-DD; datetimes are ISO 8601 with Z or an offset; time zones are IANA names. Errors return HTTP 400 with {\"error\":{\"code\",\"message\"}}. Also available as an MCP server at /mcp.",
     "contact": {
