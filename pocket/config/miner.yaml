@@ -1,0 +1,27 @@
+# date-math miner — adapted from pokt-network/pocket-relay-miner examples/docker-compose.
+# Beta by default. For MainNet switch every line marked "Mainnet:".
+redis:
+  url: "redis://redis:6379"
+
+pocket_node:
+  # Mainnet: "https://sauron-rpc.infra.pocket.network"
+  query_node_rpc_url: "https://sauron-rpc.beta.infra.pocket.network"
+  # Mainnet: "sauron-grpc.infra.pocket.network:443"
+  query_node_grpc_url: "sauron-grpc.beta.infra.pocket.network:443"
+  # Mainnet: "pocket"
+  chain_id: "pocket-lego-testnet"
+  grpc_insecure: false
+
+keys:
+  keys_file: "/keys/supplier-keys.yaml"
+
+# Mainnet: 60
+block_time_seconds: 30
+
+metrics:
+  enabled: true
+  addr: "0.0.0.0:9092"
+
+logging:
+  level: "info"
+  format: "json"

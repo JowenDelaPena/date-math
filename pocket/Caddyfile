@@ -1,0 +1,5 @@
+# Public HTTPS endpoint for gateways -> relayer. Caddy gets a Let's Encrypt cert automatically.
+# CHANGE relay.example.com to your hostname (DNS A record -> this VPS). Ports 80 and 443 must be open.
+relay.example.com {
+	reverse_proxy relayer:8080
+}

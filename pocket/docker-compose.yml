@@ -1,0 +1,78 @@
+# date-math supplier stack: Redis + miner + relayer (+ Caddy for TLS).
+# Adapted from pokt-network/pocket-relay-miner examples/docker-compose (v0.1.6). Check releases for newer tags.
+#   docker compose -p pocket-supplier up -d
+#   docker compose -p pocket-supplier ps
+services:
+  redis:
+    image: redis:8.10.1-alpine
+    # noeviction: Redis must refuse writes rather than drop relay data. AOF for persistence.
+    command: ["redis-server", "--maxmemory", "3gb", "--maxmemory-policy", "noeviction", "--appendonly", "yes", "--io-threads", "1"]
+    volumes:
+      - redis-data:/data
+    mem_limit: 4g
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  miner:
+    image: ghcr.io/pokt-network/pocket-relay-miner:v0.1.6
+    command: ["miner", "--config", "/config/miner.yaml"]
+    volumes:
+      - ./config/miner.yaml:/config/miner.yaml:ro
+      - ./config/supplier-keys.local.yaml:/keys/supplier-keys.yaml:ro
+    mem_limit: 4g
+    environment:
+      GOMEMLIMIT: 3600MiB
+      GOMAXPROCS: "2"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9092/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: on-failure
+
+  relayer:
+    image: ghcr.io/pokt-network/pocket-relay-miner:v0.1.6
+    command: ["relayer", "--config", "/config/relayer.yaml"]
+    volumes:
+      - ./config/relayer.yaml:/config/relayer.yaml:ro
+      - ./config/supplier-keys.local.yaml:/keys/supplier-keys.yaml:ro
+    ports:
+      - "127.0.0.1:8081:8081" # /ready health check, local only
+    mem_limit: 2g
+    environment:
+      GOMEMLIMIT: 1800MiB
+      GOMAXPROCS: "2"
+    depends_on:
+      redis:
+        condition: service_healthy
+      miner:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8081/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.10.0-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on:
+      - relayer
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  caddy-data:

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.JowenDelaPena/date-math",
+  "title": "Date Math",
+  "description": "Exact date/time math for agents: business days, holidays, time zones, cron, RRULE, SLA. x402 paid.",
+  "repository": {
+    "url": "https://github.com/JowenDelaPena/date-math",
+    "source": "github"
+  },
+  "version": "1.2.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://date-math.datemath.workers.dev/mcp"
+    }
+  ]
+}

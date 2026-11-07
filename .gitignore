@@ -1,0 +1,17 @@
+# Dependencies / build
+node_modules/
+.wrangler/
+dist/
+
+# SECRETS — never commit
+worker/.buyer-key
+worker/.pocket-prefix
+.dev.vars
+**/supplier-keys.local.yaml
+*.local.yaml
+
+# Generated
+pocket/card.min.json
+wd.log
+tail.json
+tail.err

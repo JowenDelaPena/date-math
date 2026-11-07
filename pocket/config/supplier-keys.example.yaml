@@ -1,0 +1,5 @@
+# Copy to supplier-keys.local.yaml (gitignored), then: chmod 600 + chown 1000:1000.
+# Get the hex key with: pocketd keys export <operator-key-name> --unarmored-hex --unsafe
+# NEVER commit or share the real file.
+keys:
+  - "REPLACE_WITH_64_HEX_CHAR_OPERATOR_PRIVATE_KEY"

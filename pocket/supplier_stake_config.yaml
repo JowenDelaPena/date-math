@@ -1,0 +1,13 @@
+# pocketd tx supplier stake-supplier --config ./supplier_stake_config.yaml --from $OPERATOR $TX_FLAGS
+# stake_amount must be >= live min_stake: pocketd query supplier params --network=$NETWORK
+# (MainNet ~59,500 POKT = 59500000000upokt as of Nov 2026; Beta is lower — check.)
+owner_address: REPLACE_OWNER_ADDRESS        # pokt1... (receives rewards / controls stake)
+operator_address: REPLACE_OPERATOR_ADDRESS  # pokt1... (signs relays; key goes in supplier-keys.local.yaml)
+stake_amount: REPLACE_AMOUNTupokt
+default_rev_share_percent:
+  REPLACE_OWNER_ADDRESS: 100
+services:
+  - service_id: date-math
+    endpoints:
+      - publicly_exposed_url: https://relay.example.com   # must be https + hostname (audit A5/A6)
+        rpc_type: REST
