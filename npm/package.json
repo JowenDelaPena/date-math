@@ -1,0 +1,21 @@
+{
+  "name": "date-math-mcp",
+  "version": "1.5.0",
+  "description": "MCP server for exact date/time math: business days, public holidays (207 countries), time zones, cron, RRULE, SLA deadlines. 25 free calls/day.",
+  "mcpName": "io.github.JowenDelaPena/date-math",
+  "type": "module",
+  "bin": { "date-math-mcp": "index.js" },
+  "files": ["index.js", "README.md"],
+  "engines": { "node": ">=20" },
+  "keywords": ["mcp", "mcp-server", "model-context-protocol", "date", "time", "timezone", "business-days", "holidays", "cron", "rrule", "calendar", "x402", "ai-agents"],
+  "repository": { "type": "git", "url": "git+https://github.com/JowenDelaPena/date-math.git", "directory": "npm" },
+  "homepage": "https://github.com/JowenDelaPena/date-math#readme",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "@x402/core": "2.27.0",
+    "@x402/evm": "2.27.0",
+    "@x402/mcp": "2.27.0",
+    "viem": "2.57.16"
+  }
+}

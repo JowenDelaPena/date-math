@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import worker from "../src/index";
 import { handleMcp } from "../src/mcp";
 import { clientKey, FreeQuota, freeLimit } from "../src/quota";
@@ -69,11 +71,27 @@ describe("MCP (payments on)", () => {
   it("unpaid tool call returns x402 payment requirements, not the result", async () => {
     const r = await rpc("tools/call", { name: "date_info", arguments: { date: "2024-02-29" } }, PAID_ENV);
     expect(r.result.isError).toBe(true);
-    const blob = JSON.stringify(r.result);
+    expect(r.result.structuredContent).toBeUndefined(); // terms travel in content[0].text (see the SDK client test)
+    const blob = r.result.content[0].text;
     expect(blob).toContain("eip155:84532");
     expect(blob).toContain(PAID_ENV.PAY_TO);
     expect(blob).toContain('"1000"');
     expect(blob).not.toContain("Thursday");
+  });
+  it("a real SDK client that listed tools first gets 'Payment required', not an output-schema error", async () => {
+    // Regression: x402 put the terms in structuredContent too, and the SDK client validates that against the
+    // outputSchema it cached from tools/list, throwing -32602 so x402 clients never got to pay.
+    const client = new Client({ name: "sdk-test", version: "1" });
+    const fetchWorker = (input: RequestInfo | URL, init?: RequestInit) => worker.fetch(new Request(input, init), PAID_ENV as any, ctx);
+    await client.connect(new StreamableHTTPClientTransport(new URL("https://date-math.example/mcp"), { fetch: fetchWorker as typeof fetch }));
+    await client.listTools();
+    const r = (await client.callTool({ name: "date_info", arguments: { date: "2024-02-29" } })) as any;
+    expect(r.isError).toBe(true);
+    expect(r.structuredContent).toBeUndefined();
+    const terms = JSON.parse(r.content[0].text);
+    expect(terms.error).toContain("Payment required");
+    expect(terms.accepts[0]).toMatchObject({ network: "eip155:84532", amount: "1000", payTo: PAID_ENV.PAY_TO });
+    await client.close();
   });
   it("tools/list stays free and mentions the price", async () => {
     const list = await rpc("tools/list", {}, PAID_ENV);

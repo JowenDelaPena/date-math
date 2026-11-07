@@ -27,6 +27,66 @@
 | `/v1/business_day` | `business_day` | Is a date a business day, and if not, why (weekend or which holiday); next/previous business day; the month's business days |
 | `/v1/pay_dates` | `pay_dates` | Payroll and billing dates (monthly, 15th and last, biweekly, weekly) moved off weekends and holidays |
 
+## Use it in your app
+
+The first 25 tool calls per day are free in all of these. No signup, no API key.
+
+**Claude Code**
+
+```bash
+claude mcp add --transport http date-math https://date-math.datemath.workers.dev/mcp
+```
+
+**Claude Desktop / claude.ai:** Settings → Connectors → Add custom connector, and paste `https://date-math.datemath.workers.dev/mcp`. Or use the local package in `claude_desktop_config.json`:
+
+```json
+{ "mcpServers": { "date-math": { "command": "npx", "args": ["-y", "date-math-mcp"] } } }
+```
+
+**Cursor** (`~/.cursor/mcp.json`)
+
+```json
+{ "mcpServers": { "date-math": { "url": "https://date-math.datemath.workers.dev/mcp" } } }
+```
+
+**VS Code** (`.vscode/mcp.json`)
+
+```json
+{ "servers": { "date-math": { "type": "http", "url": "https://date-math.datemath.workers.dev/mcp" } } }
+```
+
+**Windsurf** (`~/.codeium/windsurf/mcp_config.json`)
+
+```json
+{ "mcpServers": { "date-math": { "serverUrl": "https://date-math.datemath.workers.dev/mcp" } } }
+```
+
+**Cline** (MCP Servers → Configure)
+
+```json
+{ "mcpServers": { "date-math": { "type": "streamableHttp", "url": "https://date-math.datemath.workers.dev/mcp" } } }
+```
+
+**Any app that only runs local commands:** `npx -y date-math-mcp` ([npm package](npm/README.md)). Set `DATE_MATH_PRIVATE_KEY` to a wallet with USDC on Base and it pays for calls beyond the free tier automatically.
+
+**Vercel AI SDK**
+
+```ts
+import { createMCPClient } from "@ai-sdk/mcp";
+
+const mcp = await createMCPClient({ transport: { type: "http", url: "https://date-math.datemath.workers.dev/mcp" } });
+const tools = await mcp.tools(); // pass to generateText / streamText
+```
+
+**LangChain / LangGraph (Python)**
+
+```python
+from langchain_mcp_adapters.client import MultiServerMCPClient
+
+client = MultiServerMCPClient({"date-math": {"transport": "streamable_http", "url": "https://date-math.datemath.workers.dev/mcp"}})
+tools = await client.get_tools()
+```
+
 Business-day tools take `workdays` (weekday numbers, 0 = Sunday) for other workweeks, e.g. `[0,1,2,3,4]` for Sun–Thu or `[1,2,3,4,5,6]` for Mon–Sat.
 
 Every response is a JSON object. Errors look like `{"error":{"code","message","example"}}`, where `example` is a valid request body for that tool. Full schemas and examples are in [`/openapi.json`](https://date-math.datemath.workers.dev/openapi.json).
@@ -104,7 +164,7 @@ The service is a single Cloudflare Worker and fits the free plan: every tool use
 ```bash
 cd worker
 npm install
-npm test                 # 140 tests
+npm test                 # 151 tests
 npx wrangler login
 npx wrangler deploy
 ```
@@ -128,7 +188,7 @@ To check your deployment against x402scan's discovery rules, run `node tools/x40
 ## How it's built
 
 - **Stack:** [Hono](https://hono.dev) on Cloudflare Workers, plus [`@x402/hono`](https://www.npmjs.com/package/@x402/hono) and [`@x402/mcp`](https://www.npmjs.com/package/@x402/mcp).
-- **Discovery:** OpenAPI with `x-payment-info`, `/.well-known/x402`, x402 Bazaar metadata on every 402, and `llms.txt`.
+- **Discovery:** OpenAPI with `x-payment-info`, `/.well-known/x402`, x402 Bazaar metadata on every 402, `llms.txt`, and an MCP [Server Card](https://modelcontextprotocol.io/seps/2127-mcp-server-cards) at `/mcp/server-card` listed in `/.well-known/ai-catalog.json`.
 - **Precomputed data:** the holiday and city tables are built at build time (`worker/scripts/build-*.mjs`), so lookups are O(1) per request.
 - **Time zones:** UTC offsets come from cached `Intl` formatters and a week-segment cache. They're tested against direct lookups for tricky zones (Morocco, Lord Howe, Chatham).
 - **Cron:** a built-in engine (`worker/src/cron.ts`), checked against `cron-parser` on 400 random expressions.

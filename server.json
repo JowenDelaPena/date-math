@@ -7,11 +7,34 @@
     "url": "https://github.com/JowenDelaPena/date-math",
     "source": "github"
   },
-  "version": "1.4.0",
+  "websiteUrl": "https://github.com/JowenDelaPena/date-math",
+  "version": "1.5.0",
   "remotes": [
     {
       "type": "streamable-http",
       "url": "https://date-math.datemath.workers.dev/mcp"
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "date-math-mcp",
+      "version": "1.5.0",
+      "transport": { "type": "stdio" },
+      "environmentVariables": [
+        {
+          "name": "DATE_MATH_PRIVATE_KEY",
+          "description": "Optional. Key of a wallet holding USDC on Base, to pay $0.001 per call after the 25 free daily calls.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "DATE_MATH_MAX_PRICE",
+          "description": "Optional. The most to pay for one call (default $0.001).",
+          "isRequired": false,
+          "isSecret": false
+        }
+      ]
     }
   ]
 }

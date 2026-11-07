@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import server from "../../server.json";
 import worker from "../src/index";
 
 const PAY_TO = "0x000000000000000000000000000000000000dEaD";
@@ -89,6 +90,26 @@ describe("discovery", () => {
       expect(spec.paths[p].post.responses["200"].content["application/json"].schema.properties).toBeTruthy();
       expect(spec.paths[p].post.responses["402"]).toEqual({ description: "Payment Required" });
     }
+  });
+
+  it("serves an MCP Server Card (SEP-2127) and an AI Catalog that points to it, matching server.json", async () => {
+
+    for (const path of ["/mcp/server-card", "/.well-known/mcp/server-card.json"]) {
+      const res = await call(path);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-type")).toBe("application/mcp-server-card+json");
+      expect(res.headers.get("access-control-allow-origin")).toBe("*");
+      const card = await res.json();
+      expect(card.$schema).toBe("https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json");
+      expect(card).toMatchObject({ name: server.name, version: server.version, description: server.description, title: server.title });
+      expect(card.description.length).toBeLessThanOrEqual(100);
+      expect(card.remotes[0]).toMatchObject({ type: "streamable-http", url: server.remotes[0].url });
+      expect(card.remotes[0].supportedProtocolVersions).toContain("2025-06-18");
+    }
+    const cat = await call("/.well-known/ai-catalog.json");
+    expect(cat.headers.get("content-type")).toBe("application/ai-catalog+json");
+    const { entries } = await cat.json();
+    expect(entries).toEqual([expect.objectContaining({ type: "application/mcp-server-card+json", url: "https://date-math.datemath.workers.dev/mcp/server-card" })]);
   });
 
   it("402 challenge carries a Bazaar input schema (x402scan requirement)", async () => {

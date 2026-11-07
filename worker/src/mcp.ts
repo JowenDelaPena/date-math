@@ -121,7 +121,16 @@ function buildServer(p: Payments | null, free: number, takeFree: (() => Promise<
       console.error("x402 init failed", err);
       return { content: [{ type: "text", text: "payment facilitator unreachable, try again shortly" }], isError: true };
     }
-    return handlers.get(t.name)!(args, { ...extra, _meta: req.params._meta });
+    const res = await handlers.get(t.name)!(args, { ...extra, _meta: req.params._meta });
+    // x402 puts the payment terms (and settlement errors) in structuredContent as well as content[0].text. The MCP
+    // SDK client validates structuredContent against the tool's outputSchema even when isError is set, so once it
+    // has seen tools/list it throws -32602 instead of returning "Payment required", and x402 clients never pay.
+    // content[0].text is the channel the x402 MCP spec requires, so drop the structured copy on errors.
+    if (res.isError && res.structuredContent) {
+      const { structuredContent: _, ...rest } = res;
+      return rest;
+    }
+    return res;
   });
   return server;
 }
