@@ -15,3 +15,6 @@ pocket/card.min.json
 wd.log
 tail.json
 tail.err
+
+# Maintainer-only notes and Pocket configs (kept local)
+private/
