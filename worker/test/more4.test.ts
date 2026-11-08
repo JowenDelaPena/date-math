@@ -190,3 +190,27 @@ describe("current_time (free)", () => {
     expect(bad.status).toBe(400);
   });
 });
+
+describe("landing page", () => {
+  const get = (accept: string) => worker.fetch(new Request("https://date-math.example/", { headers: { Accept: accept } }), PAID_ENV as any, ctx);
+
+  it("serves HTML to browsers with a strict CSP, listing every tool", async () => {
+    const res = await get("text/html,application/xhtml+xml,*/*;q=0.8");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/html");
+    expect(res.headers.get("content-security-policy")).toContain("default-src 'none'");
+    const html = await res.text();
+    const { TOOLS } = await import("../src/tools");
+    for (const t of TOOLS) expect(html, t.name).toContain(`<code>${t.name}</code>`);
+    expect(html).toContain("current_time");
+    expect(html).not.toMatch(/gradient/i);
+  });
+
+  it("keeps the JSON index for agents and scripts", async () => {
+    for (const accept of ["application/json", "*/*", ""]) {
+      const res = await get(accept);
+      expect(res.headers.get("content-type"), accept).toContain("application/json");
+      expect((await res.json()).service).toBe("date-math");
+    }
+  });
+});

@@ -2,6 +2,7 @@ import { Hono, type Context } from "hono";
 import { SUPPORTED_PROTOCOL_VERSIONS } from "@modelcontextprotocol/sdk/types.js";
 import { InputError } from "./errors";
 import spec from "./openapi.json";
+import { ICON_DATA_URI, LANDING_CSP, landingHtml } from "./landing";
 import { FREE_TOOLS, TOOLS } from "./tools";
 
 // The free API (no payments). index.ts wraps it with x402 for direct paid access and adds /mcp.
@@ -36,7 +37,20 @@ export function parseBody(text: string): Record<string, unknown> {
   return body as Record<string, unknown>;
 }
 
-// Human-readable overview (card "docs" URL). Still a JSON object, per Pocket backend rules.
+// Browsers get the landing page; agents, scripts and crawlers that don't ask for HTML get the JSON index.
+let landing: string | undefined;
+app.get("/", (c, next) => {
+  if (!(c.req.header("Accept") ?? "").includes("text/html")) return next();
+  landing ??= landingHtml(ORIGIN, VERSION);
+  return c.body(landing, 200, { "Content-Type": "text/html; charset=utf-8", "Content-Security-Policy": LANDING_CSP, "X-Content-Type-Options": "nosniff" });
+});
+
+const iconSvg = decodeURIComponent(ICON_DATA_URI.slice("data:image/svg+xml,".length));
+const serveIcon = (c: Context) => c.body(iconSvg, 200, { "Content-Type": "image/svg+xml", "Cache-Control": "public, max-age=86400" });
+app.get("/favicon.svg", serveIcon);
+app.get("/favicon.ico", serveIcon);
+
+// Machine-readable overview (card "docs" URL). A JSON object, per Pocket backend rules.
 app.get("/", (c) =>
   c.json({
     service: SERVICE,
