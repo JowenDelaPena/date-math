@@ -1,0 +1,31 @@
+# Weekly dependency update proposals (pull requests to review, never auto-merged).
+# x402 and the MCP SDK are pinned on purpose (mismatched versions broke payments), so they are excluded;
+# update them by hand. New releases wait 14 days before they are proposed.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /worker
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    ignore:
+      - dependency-name: "@x402/*"
+      - dependency-name: "@modelcontextprotocol/sdk"
+    open-pull-requests-limit: 5
+  - package-ecosystem: npm
+    directory: /npm
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    ignore:
+      - dependency-name: "@x402/*"
+      - dependency-name: "@modelcontextprotocol/sdk"
+    open-pull-requests-limit: 5
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
