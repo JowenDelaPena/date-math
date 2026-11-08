@@ -100,6 +100,32 @@ client = MultiServerMCPClient({"date-math": {"transport": "streamable_http", "ur
 tools = await client.get_tools()
 ```
 
+**OpenAI Agents SDK (Python)**
+
+```python
+from agents import Agent, Runner
+from agents.mcp import MCPServerStreamableHttp
+
+async with MCPServerStreamableHttp(name="date-math", params={"url": "https://date-math.datemath.workers.dev/mcp"}) as server:
+    agent = Agent(name="Scheduler", instructions="Use date-math for any date or time calculation.", mcp_servers=[server])
+    result = await Runner.run(agent, "What date is 10 business days after 2026-12-18 in Germany?")
+    print(result.final_output)
+```
+
+**CrewAI**
+
+```python
+from crewai import Agent
+from crewai_tools import MCPServerAdapter
+
+params = {"url": "https://date-math.datemath.workers.dev/mcp", "transport": "streamable-http"}
+with MCPServerAdapter(params) as tools:
+    planner = Agent(role="Scheduler", goal="Get dates and deadlines exactly right", backstory="Never guesses dates.", tools=tools)
+    # add the agent to a Task and Crew, then crew.kickoff() inside this block
+```
+
+**n8n:** add an **AI Agent** node, then attach an **MCP Client Tool** node to its Tool input. Set **Endpoint** to `https://date-math.datemath.workers.dev/mcp`, **Server Transport** to **HTTP Streamable**, and **Authentication** to **None**.
+
 Business-day tools take `workdays` (weekday numbers, 0 = Sunday) for other workweeks, e.g. `[0,1,2,3,4]` for Sun–Thu or `[1,2,3,4,5,6]` for Mon–Sat.
 
 Every response is a JSON object. Errors look like `{"error":{"code","message","example"}}`, where `example` is a valid request body for that tool. Full schemas and examples are in [`/openapi.json`](https://date-math.datemath.workers.dev/openapi.json).
