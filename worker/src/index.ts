@@ -28,20 +28,25 @@ const FREE_NAMES = new Set(FREE_TOOLS.map((f) => f.name));
 /** Outcomes that may mean lost earnings; logged again at error level so Observability's error view shows them. */
 const ALERT = new Set(["rpc_error", "payment_failed", "unverified", "unparsable", "error"]);
 
-function log(fields: Record<string, unknown>) {
-  console.log(JSON.stringify({ evt: "call", ...fields }));
+/** Header our own monitors and scripts send, so logs can separate them from real users. Logging only. */
+const INTERNAL_HEADER = "X-Date-Math-Internal";
+
+function log(src: string, fields: Record<string, unknown>) {
+  console.log(JSON.stringify({ evt: "call", src, ...fields }));
 }
 
 export default {
   async fetch(request: Request, env: WorkerEnv, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     const started = Date.now();
+    // Per request (one isolate can serve several requests concurrently, so never store this globally).
+    const src = request.headers.get(INTERNAL_HEADER) === "1" ? "internal" : "external";
     const prefix = env.POCKET_PREFIX ? `/${env.POCKET_PREFIX}` : "";
 
     if (prefix && (url.pathname === prefix || url.pathname.startsWith(prefix + "/"))) {
       url.pathname = url.pathname.slice(prefix.length) || "/";
       const res = await api.fetch(new Request(url, request), env, ctx);
-      if (PAID.has(url.pathname)) log({ via: "pocket", path: url.pathname, status: res.status, outcome: outcome(res, false), ms: Date.now() - started });
+      if (PAID.has(url.pathname)) log(src, { via: "pocket", path: url.pathname, status: res.status, outcome: outcome(res, false), ms: Date.now() - started });
       return res;
     }
 
@@ -51,9 +56,9 @@ export default {
       if (method === "tools/call") {
         // Free tools ignore any attached payment, so never report them as failed payments.
         const r = mcpOutcome(await res.clone().text(), Boolean(attempted) && !FREE_NAMES.has(tool ?? ""));
-        log({ via: "mcp", path: tool ?? "?", status: res.status, ...r, ms: Date.now() - started });
-        if (ALERT.has(r.outcome)) console.error(JSON.stringify({ evt: "payment_alert", via: "mcp", path: tool, outcome: r.outcome }));
-      } else if (method === "tools/list") log({ via: "mcp", path: "tools/list", status: res.status, outcome: "free", ms: Date.now() - started });
+        log(src, { via: "mcp", path: tool ?? "?", status: res.status, ...r, ms: Date.now() - started });
+        if (ALERT.has(r.outcome)) console.error(JSON.stringify({ evt: "payment_alert", src, via: "mcp", path: tool, outcome: r.outcome }));
+      } else if (method === "tools/list") log(src, { via: "mcp", path: "tools/list", status: res.status, outcome: "free", ms: Date.now() - started });
       return res;
     }
 
@@ -61,8 +66,8 @@ export default {
     if (request.method === "POST" && PAID.has(url.pathname)) {
       const o = outcome(res, Boolean(env.PAY_TO), request);
       const settle = o === "paid" ? safeDecode(res.headers.get("PAYMENT-RESPONSE")) : undefined;
-      log({ via: "http", path: url.pathname, status: res.status, outcome: o, ...(settle?.transaction ? { tx: settle.transaction } : {}), ms: Date.now() - started });
-      if (ALERT.has(o)) console.error(JSON.stringify({ evt: "payment_alert", via: "http", path: url.pathname, outcome: o }));
+      log(src, { via: "http", path: url.pathname, status: res.status, outcome: o, ...(settle?.transaction ? { tx: settle.transaction } : {}), ms: Date.now() - started });
+      if (ALERT.has(o)) console.error(JSON.stringify({ evt: "payment_alert", src, via: "http", path: url.pathname, outcome: o }));
     }
     return res;
   },

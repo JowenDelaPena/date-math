@@ -15,6 +15,17 @@ import { createx402MCPClient } from "@x402/mcp";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
 const API = process.env.API_URL ?? "https://date-math.datemath.workers.dev";
+
+// Mark our own requests so Cloudflare logs show them as src = "internal", not as real users.
+const realFetch = globalThis.fetch;
+globalThis.fetch = (input, init) => {
+  const url = String(input instanceof Request ? input.url : input);
+  if (!url.startsWith(API)) return realFetch(input, init);
+  const req = new Request(input, init);
+  req.headers.set("X-Date-Math-Internal", "1");
+  return realFetch(req);
+};
+
 const USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"; // USDC on Base
 const RPC = "https://mainnet.base.org";
 const KEY_FILE = new URL("../.buyer-key", import.meta.url);

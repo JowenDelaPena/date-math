@@ -19,6 +19,17 @@ import { ExactEvmScheme } from "@x402/evm";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
 const API = (process.env.API_URL || "https://date-math.datemath.workers.dev").replace(/\/$/, "");
+
+// Mark our own requests so Cloudflare logs show them as src = "internal", not as real users.
+const realFetch = globalThis.fetch;
+globalThis.fetch = (input, init) => {
+  const url = String(input instanceof Request ? input.url : input);
+  if (!url.startsWith(API)) return realFetch(input, init);
+  const req = new Request(input, init);
+  req.headers.set("X-Date-Math-Internal", "1");
+  return realFetch(req);
+};
+
 const EXPECT = {
   payTo: (process.env.EXPECTED_PAY_TO || "0x7eC21Ee3AA308D2cbB8c65ef0E89af2a30101656").toLowerCase(),
   amount: "1000", // $0.001 in USDC units (6 decimals)

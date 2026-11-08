@@ -254,3 +254,22 @@ describe("numbers sent as text", () => {
     expect(() => parse.run({ text: "5", timezone: "UTC", reference: "2026-11-07T00:00:00Z" })).not.toThrow(/must be a string/);
   });
 });
+
+describe("log source tag", () => {
+  it("logs src internal for our own scripts and external for everyone else", async () => {
+    const { vi } = await import("vitest");
+    const lines: string[] = [];
+    const spy = vi.spyOn(console, "log").mockImplementation((l: unknown) => void lines.push(String(l)));
+    const call = (headers: Record<string, string>) =>
+      worker.fetch(new Request("https://date-math.example/mcp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream", ...headers },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "current_time", arguments: {} } }),
+      }), {} as any, ctx);
+    await call({ "X-Date-Math-Internal": "1" });
+    await call({});
+    spy.mockRestore();
+    const srcs = lines.filter((l) => l.includes('"evt":"call"')).map((l) => JSON.parse(l).src);
+    expect(srcs).toEqual(["internal", "external"]);
+  });
+});
