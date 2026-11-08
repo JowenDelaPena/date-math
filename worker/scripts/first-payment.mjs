@@ -20,7 +20,11 @@ const API = process.env.API_URL ?? "https://date-math.datemath.workers.dev";
 const realFetch = globalThis.fetch;
 globalThis.fetch = (input, init) => {
   const url = String(input instanceof Request ? input.url : input);
-  if (!url.startsWith(API)) return realFetch(input, init);
+  let sameOrigin = false;
+  try {
+    sameOrigin = new URL(url).origin === new URL(API).origin; // exact origin match, not a string prefix
+  } catch {}
+  if (!sameOrigin) return realFetch(input, init);
   const req = new Request(input, init);
   req.headers.set("X-Date-Math-Internal", "1");
   return realFetch(req);

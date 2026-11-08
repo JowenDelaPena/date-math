@@ -49,7 +49,15 @@ async function bazaar(name, base) {
     const j = await json(`${base}?limit=1000&offset=${offset}`);
     const items = j.items ?? j.resources ?? [];
     total = j.pagination?.total ?? (items.length < 1000 ? offset + items.length : Infinity);
-    for (const x of items) if (String(x.resource).startsWith(API)) ours.add(x.resource.slice(API.length));
+    for (const x of items) {
+      let u;
+      try {
+        u = new URL(String(x.resource));
+      } catch {
+        continue;
+      }
+      if (u.origin === new URL(API).origin) ours.add(u.pathname); // exact origin match, not a string prefix
+    }
     seen += items.length;
     offset += 1000;
     if (!items.length) break;
