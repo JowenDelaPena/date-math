@@ -2,9 +2,9 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Date Math",
-    "version": "1.5.0",
+    "version": "1.6.0",
     "description": "Deterministic date and time math for AI agents: date differences, business days, date arithmetic, time zone conversion and calendar facts. Paid per call via x402 (USDC on Base, $0.001); probes and spec are free. All inputs are JSON bodies; all responses are JSON objects. Errors return {\"error\":{\"code\",\"message\",\"example\"}}.",
-    "x-guidance": "Date Math does exact date and time arithmetic so you don't have to. Every tool is POST with a JSON body, returns a JSON object, and costs $0.001 (x402, USDC on Base). POST /v1/diff: days/weeks/months/business days between two dates (pass country, e.g. \"US\", to skip its public holidays). POST /v1/add: the date N days/weeks/months/business days before or after a date. POST /v1/convert: a time in another IANA time zone (DST-aware). POST /v1/info: weekday, ISO week, quarter or leap-year status of a date. POST /v1/holidays: a country's public holidays for a year. POST /v1/overlap: when working hours overlap across time zones (meeting slots). POST /v1/cron: explain a cron expression and list its next runs. POST /v1/parse: turn text like \"next Friday at 3pm\" into an exact datetime. POST /v1/city: the time zone and local time of a city by name. POST /v1/recurrence: concrete dates for an iCal RRULE (\"every 2nd Tuesday\"). POST /v1/business_hours: SLA deadline N working hours from now, or working hours elapsed. POST /v1/business_day: is a date a business day (and if not, which holiday), plus the next/previous business day. POST /v1/pay_dates: payroll or billing dates (monthly, 15th and last, biweekly, weekly) moved off weekends and holidays. Business-day tools accept workdays (e.g. [0,1,2,3,4] for Sun–Thu). Dates are YYYY-MM-DD; datetimes are ISO 8601 with Z or an offset; time zones are IANA names. Errors return HTTP 400 with {\"error\":{\"code\",\"message\",\"example\"}}; example is a valid body for that tool. Also available as an MCP server at /mcp.",
+    "x-guidance": "Date Math does exact date and time arithmetic so you don't have to. Every tool is POST with a JSON body, returns a JSON object, and costs $0.001 (x402, USDC on Base). POST /v1/diff: days/weeks/months/business days between two dates (pass country, e.g. \"US\", to skip its public holidays). POST /v1/add: the date N days/weeks/months/business days before or after a date. POST /v1/convert: a time in another IANA time zone (DST-aware). POST /v1/info: weekday, ISO week, quarter or leap-year status of a date. POST /v1/holidays: a country's public holidays for a year. POST /v1/overlap: when working hours overlap across time zones (meeting slots). POST /v1/cron: explain a cron expression and list its next runs. POST /v1/parse: turn text like \"next Friday at 3pm\" into an exact datetime. POST /v1/city: the time zone and local time of a city by name. POST /v1/recurrence: concrete dates for an iCal RRULE (\"every 2nd Tuesday\"). POST /v1/business_hours: SLA deadline N working hours from now, or working hours elapsed. POST /v1/business_day: is a date a business day (and if not, which holiday), plus the next/previous business day. POST /v1/pay_dates: payroll or billing dates (monthly, 15th and last, biweekly, weekly) moved off weekends and holidays. POST /v1/stay: Schengen-style 90/180 stay limits (days used, days left, longest stay from an entry date). POST /v1/timestamp: convert mixed Unix/Excel/ISO/slash-date timestamps to UTC and flag ambiguous ones. POST /v1/dst: a zone's DST clock changes and whether a local time is skipped or repeated. Business-day tools accept workdays (e.g. [0,1,2,3,4] for Sun–Thu). Dates are YYYY-MM-DD; datetimes are ISO 8601 with Z or an offset; time zones are IANA names. Errors return HTTP 400 with {\"error\":{\"code\",\"message\",\"example\"}}; example is a valid body for that tool. Also available as an MCP server at /mcp.",
     "contact": {
       "email": "jowendelapena2003@gmail.com"
     }
@@ -1823,6 +1823,584 @@
                             "type": "boolean",
                             "description": "Only with adjust none"
                           }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "Payment Required"
+          }
+        }
+      }
+    },
+    "/v1/stay": {
+      "post": {
+        "operationId": "stayCalculator",
+        "summary": "Rolling stay limits (Schengen 90/180): days used, days left, overstay, max stay from an entry date",
+        "tags": [
+          "Travel"
+        ],
+        "x-payment-info": {
+          "price": {
+            "mode": "fixed",
+            "currency": "USD",
+            "amount": "0.001"
+          },
+          "protocols": [
+            {
+              "x402": {}
+            }
+          ]
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "trips"
+                ],
+                "properties": {
+                  "trips": {
+                    "type": "array",
+                    "maxItems": 200,
+                    "description": "Past and planned stays. Entry and exit days both count as days present.",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "entry",
+                        "exit"
+                      ],
+                      "properties": {
+                        "entry": {
+                          "$ref": "#/components/schemas/Date"
+                        },
+                        "exit": {
+                          "$ref": "#/components/schemas/Date"
+                        }
+                      }
+                    }
+                  },
+                  "date": {
+                    "$ref": "#/components/schemas/Date",
+                    "description": "Day to evaluate (default: today, UTC)"
+                  },
+                  "entry": {
+                    "$ref": "#/components/schemas/Date",
+                    "description": "Planned entry date: returns the longest stay allowed from it"
+                  },
+                  "max_days": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 365,
+                    "default": 90
+                  },
+                  "window_days": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 730,
+                    "default": 180,
+                    "description": "Length of the rolling window, counted back from each day (inclusive)"
+                  }
+                }
+              },
+              "example": {
+                "trips": [
+                  {
+                    "entry": "2026-06-01",
+                    "exit": "2026-07-15"
+                  },
+                  {
+                    "entry": "2026-09-10",
+                    "exit": "2026-09-30"
+                  }
+                ],
+                "date": "2026-10-01",
+                "entry": "2026-11-01"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "date",
+                    "rule",
+                    "days_used",
+                    "days_remaining",
+                    "overstay_days",
+                    "in_compliance",
+                    "first_overstay",
+                    "max_stay",
+                    "next_full_stay_date",
+                    "note"
+                  ],
+                  "properties": {
+                    "date": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "type": "object",
+                      "required": [
+                        "max_days",
+                        "window_days",
+                        "window_start",
+                        "window_end"
+                      ],
+                      "properties": {
+                        "max_days": {
+                          "type": "integer"
+                        },
+                        "window_days": {
+                          "type": "integer"
+                        },
+                        "window_start": {
+                          "type": "string"
+                        },
+                        "window_end": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "days_used": {
+                      "type": "integer",
+                      "description": "Days present in the window ending on date"
+                    },
+                    "days_remaining": {
+                      "type": "integer"
+                    },
+                    "overstay_days": {
+                      "type": "integer"
+                    },
+                    "in_compliance": {
+                      "type": "boolean"
+                    },
+                    "first_overstay": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "First day any trip broke the rule, or null"
+                    },
+                    "max_stay": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "required": [
+                        "entry",
+                        "days_allowed",
+                        "latest_exit"
+                      ],
+                      "properties": {
+                        "entry": {
+                          "type": "string"
+                        },
+                        "days_allowed": {
+                          "type": "integer"
+                        },
+                        "latest_exit": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "description": "Present when entry was given"
+                    },
+                    "next_full_stay_date": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Earliest date after date from which a full max_days stay is allowed"
+                    },
+                    "note": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "Payment Required"
+          }
+        }
+      }
+    },
+    "/v1/timestamp": {
+      "post": {
+        "operationId": "timestampNormalize",
+        "summary": "Detect and convert mixed timestamps (Unix, Excel, FILETIME, ISO, RFC 2822, slash dates) to UTC; flag ambiguous ones",
+        "tags": [
+          "Time zones"
+        ],
+        "x-payment-info": {
+          "price": {
+            "mode": "fixed",
+            "currency": "USD",
+            "amount": "0.001"
+          },
+          "protocols": [
+            {
+              "x402": {}
+            }
+          ]
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "values"
+                ],
+                "properties": {
+                  "values": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "items": {
+                      "type": [
+                        "string",
+                        "number"
+                      ]
+                    },
+                    "description": "Timestamps as strings or numbers. Pass very large integers (ns) as strings."
+                  },
+                  "timezone": {
+                    "type": "string",
+                    "description": "Zone for values without an offset and for the local output (default UTC)",
+                    "example": "Asia/Manila"
+                  },
+                  "numeric_format": {
+                    "type": "string",
+                    "enum": [
+                      "auto",
+                      "unix_seconds",
+                      "unix_ms",
+                      "unix_us",
+                      "unix_ns",
+                      "excel",
+                      "filetime"
+                    ],
+                    "default": "auto"
+                  },
+                  "date_order": {
+                    "type": "string",
+                    "enum": [
+                      "MDY",
+                      "DMY"
+                    ],
+                    "description": "How to read ambiguous slash dates like 03/04/2026 (default MDY, with the other reading in alternatives)"
+                  }
+                }
+              },
+              "example": {
+                "values": [
+                  1762500000,
+                  "03/04/2026 14:30",
+                  45000,
+                  "Tue, 10 Nov 2026 14:30:00 GMT"
+                ],
+                "timezone": "Asia/Manila"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "timezone",
+                    "count",
+                    "ok",
+                    "results"
+                  ],
+                  "properties": {
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "ok": {
+                      "type": "integer",
+                      "description": "How many values were understood"
+                    },
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "input",
+                          "ok"
+                        ],
+                        "properties": {
+                          "input": {
+                            "type": [
+                              "string",
+                              "number",
+                              "object",
+                              "array",
+                              "boolean",
+                              "null"
+                            ]
+                          },
+                          "ok": {
+                            "type": "boolean"
+                          },
+                          "format": {
+                            "type": "string"
+                          },
+                          "utc": {
+                            "type": "string"
+                          },
+                          "unix_seconds": {
+                            "type": "integer"
+                          },
+                          "unix_ms": {
+                            "type": "integer"
+                          },
+                          "local": {
+                            "type": "string"
+                          },
+                          "assumed_timezone": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "description": "Zone used because the value had no offset"
+                          },
+                          "ambiguous": {
+                            "type": "boolean"
+                          },
+                          "alternatives": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "format",
+                                "utc"
+                              ],
+                              "properties": {
+                                "format": {
+                                  "type": "string"
+                                },
+                                "utc": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          },
+                          "error": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "Payment Required"
+          }
+        }
+      }
+    },
+    "/v1/dst": {
+      "post": {
+        "operationId": "dstCheck",
+        "summary": "DST clock changes for a time zone and year; is a local time valid, skipped or repeated",
+        "tags": [
+          "Time zones"
+        ],
+        "x-payment-info": {
+          "price": {
+            "mode": "fixed",
+            "currency": "USD",
+            "amount": "0.001"
+          },
+          "protocols": [
+            {
+              "x402": {}
+            }
+          ]
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "timezone"
+                ],
+                "properties": {
+                  "timezone": {
+                    "type": "string",
+                    "description": "IANA time zone, e.g. Asia/Manila",
+                    "example": "Asia/Manila"
+                  },
+                  "datetime": {
+                    "type": "string",
+                    "description": "Local wall time to check, without offset: YYYY-MM-DDTHH:MM[:SS]",
+                    "example": "2026-03-08T02:30"
+                  },
+                  "year": {
+                    "type": "integer",
+                    "minimum": 1900,
+                    "maximum": 2100,
+                    "description": "Year to list (default: the datetime's year, else the current year)"
+                  }
+                }
+              },
+              "example": {
+                "timezone": "America/New_York",
+                "datetime": "2026-03-08T02:30"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "timezone",
+                    "year",
+                    "observes_dst",
+                    "standard_offset",
+                    "dst_offset",
+                    "transitions",
+                    "check"
+                  ],
+                  "properties": {
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "year": {
+                      "type": "integer"
+                    },
+                    "observes_dst": {
+                      "type": "boolean"
+                    },
+                    "standard_offset": {
+                      "type": "string"
+                    },
+                    "dst_offset": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "transitions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "at_utc",
+                          "local_before",
+                          "local_after",
+                          "offset_before",
+                          "offset_after",
+                          "change_minutes",
+                          "type"
+                        ],
+                        "properties": {
+                          "at_utc": {
+                            "type": "string"
+                          },
+                          "local_before": {
+                            "type": "string"
+                          },
+                          "local_after": {
+                            "type": "string"
+                          },
+                          "offset_before": {
+                            "type": "string"
+                          },
+                          "offset_after": {
+                            "type": "string"
+                          },
+                          "change_minutes": {
+                            "type": "integer"
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "clocks_forward",
+                              "clocks_back"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "check": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "required": [
+                        "local",
+                        "status",
+                        "instants",
+                        "resolved",
+                        "note"
+                      ],
+                      "properties": {
+                        "local": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "valid",
+                            "skipped",
+                            "repeated"
+                          ]
+                        },
+                        "instants": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "resolved": {
+                          "type": "string"
+                        },
+                        "note": {
+                          "type": "string"
                         }
                       }
                     }

@@ -28,6 +28,9 @@
 | `/v1/business_hours` | `business_hours_deadline` | SLA deadline N working hours from now, or working time elapsed |
 | `/v1/business_day` | `business_day` | Is a date a business day, and if not, why (weekend or which holiday); next/previous business day; the month's business days |
 | `/v1/pay_dates` | `pay_dates` | Payroll and billing dates (monthly, 15th and last, biweekly, weekly) moved off weekends and holidays |
+| `/v1/stay` | `stay_calculator` | Schengen-style 90/180 stay limits: days used and left, overstay check, the longest stay from a planned entry date, the next date a full stay is possible |
+| `/v1/timestamp` | `timestamp_normalize` | Converts up to 100 mixed timestamps (Unix s/ms/µs/ns, Excel serials, FILETIME, ISO 8601, RFC 2822, slash dates) to UTC and flags ambiguous ones like 03/04/2026 |
+| `/v1/dst` | `dst_check` | A zone's daylight-saving clock changes for a year, and whether a local time is valid, skipped (spring-forward gap) or repeated (fall-back) |
 
 ## Use it in your app
 

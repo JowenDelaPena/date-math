@@ -3,6 +3,7 @@ import { add, convert, diff, info } from "./date";
 import { cron, holidays, overlap, parse } from "./more";
 import { businessHours, cityTime, recurrence } from "./more2";
 import { businessDay, payDates } from "./biz";
+import { dst, stay, timestamp } from "./more3";
 
 export interface Tool {
   name: string; // MCP tool name
@@ -128,6 +129,33 @@ TOOLS.push(
       "Upcoming pay or billing dates for monthly, semi-monthly (e.g. 15th and last day), biweekly or weekly schedules, moved off weekends and public holidays (to the previous, next or nearest business day). Use for payroll calendars, invoice due dates and recurring billing.",
     run: payDates,
     example: { schedule: "semi_monthly", from: "2026-12-01", count: 4, country: "PH" },
+  },
+  {
+    name: "stay_calculator",
+    path: "/v1/stay",
+    title: "Visa stay calculator (Schengen 90/180)",
+    description:
+      'Rolling stay-limit math such as the Schengen 90/180 rule: days used in the window, days left, overstay check, the longest stay allowed from a planned entry date, and the next date a full stay is possible. Entry and exit days both count. Custom rules via max_days/window_days. Use for travel planning, visa-free stays and "can I enter on".',
+    run: stay,
+    example: { trips: [{ entry: "2026-06-01", exit: "2026-07-15" }, { entry: "2026-09-10", exit: "2026-09-30" }], date: "2026-10-01", entry: "2026-11-01" },
+  },
+  {
+    name: "timestamp_normalize",
+    path: "/v1/timestamp",
+    title: "Normalize timestamps",
+    description:
+      "Detect and convert up to 100 mixed timestamps to UTC ISO 8601: Unix seconds/ms/µs/ns, Excel serial dates, Windows FILETIME, ISO 8601, RFC 2822, YYYY/MM/DD, month-name dates. Flags ambiguous values (03/04/2026: March 4 or 3 April? 45000: Excel date or Unix seconds?) with alternatives. Use for cleaning CSV, log and spreadsheet data.",
+    run: timestamp,
+    example: { values: [1762500000, "03/04/2026 14:30", 45000, "Tue, 10 Nov 2026 14:30:00 GMT"], timezone: "Asia/Manila" },
+  },
+  {
+    name: "dst_check",
+    path: "/v1/dst",
+    title: "DST transitions and local-time check",
+    description:
+      "Daylight saving time for a time zone: does it observe DST, the year's exact clock changes (UTC instant, local before/after), and whether a local time is valid, skipped (spring-forward gap, e.g. 02:30) or repeated (fall-back, happens twice). Use before scheduling jobs, alarms or meetings near clock changes.",
+    run: dst,
+    example: { timezone: "America/New_York", datetime: "2026-03-08T02:30" },
   },
 );
 
