@@ -1,5 +1,7 @@
 # Date Math
 
+[![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/jowendelapena/date-math)
+
 **Exact date and time math for AI agents, paid per call.** LLMs are unreliable at business days, DST, recurring schedules and holiday calendars. Date Math gives them deterministic answers over HTTP or MCP.
 
 - **Price:** $0.001 per call in USDC on Base, via [x402](https://x402.org)
