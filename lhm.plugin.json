@@ -1,0 +1,2930 @@
+{
+  "identifier": "jowendelapena-date-math",
+  "name": "Date Math",
+  "version": "1.7.0",
+  "description": "Exact date and time math for AI agents: business days, public holidays for 207 countries, time zones, DST, SLA deadlines, cron and RRULE schedules, and stock-market calendars. 25 free calls a day, then $0.001 per call via x402.",
+  "author": "JowenDelaPena",
+  "homepage": "https://date-math.datemath.workers.dev",
+  "cloudEndpoint": "https://date-math.datemath.workers.dev/mcp",
+  "tags": [
+    "date",
+    "time",
+    "timezone",
+    "calendar",
+    "business-days",
+    "holidays",
+    "scheduling",
+    "x402"
+  ],
+  "prompts": [],
+  "resources": [],
+  "tools": [
+    {
+      "name": "date_diff",
+      "title": "Date difference",
+      "description": "How many days, weeks, months or business days between two dates or datetimes: calendar (Y/M/D), totals, and business days (weekdays in [from, to) minus holidays; pass country to exclude its public holidays). Use for age, tenure, countdowns, notice periods and working days until a deadline. First 25 calls per day are free, then $0.001 per call (x402).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "YYYY-MM-DD, or ISO 8601 datetime with Z or offset",
+            "example": "2026-11-07T14:30:00Z"
+          },
+          "to": {
+            "type": "string",
+            "description": "YYYY-MM-DD, or ISO 8601 datetime with Z or offset",
+            "example": "2026-11-07T14:30:00Z"
+          },
+          "holidays": {
+            "type": "array",
+            "maxItems": 1000,
+            "items": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-11-07"
+            },
+            "description": "Extra dates excluded from business-day counts (rest days from workdays are always excluded)"
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}$",
+            "description": "ISO 3166-1 alpha-2 country code (207 countries); its public holidays (2000–2050) are excluded from business days",
+            "example": "US"
+          },
+          "workdays": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 7,
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            },
+            "description": "Working days of the week, 0 = Sunday. Default [1,2,3,4,5] (Mon–Fri); e.g. [0,1,2,3,4] for Sun–Thu or [1,2,3,4,5,6] for Mon–Sat",
+            "example": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ],
+        "description": "business_days counts working days (default Mon–Fri, see workdays) in [from, to) minus holidays; only for date inputs."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "forward",
+              "backward"
+            ]
+          },
+          "total_days": {
+            "type": "integer"
+          },
+          "total_weeks": {
+            "type": "integer"
+          },
+          "calendar": {
+            "type": "object",
+            "properties": {
+              "years": {
+                "type": "integer"
+              },
+              "months": {
+                "type": "integer"
+              },
+              "days": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "years",
+              "months",
+              "days"
+            ]
+          },
+          "business_days": {
+            "type": "integer",
+            "description": "Weekdays in [from, to) minus holidays (date inputs only)"
+          },
+          "total_hours": {
+            "type": "integer",
+            "description": "Datetime inputs only"
+          },
+          "total_minutes": {
+            "type": "integer"
+          },
+          "total_seconds": {
+            "type": "integer"
+          },
+          "iso_duration": {
+            "type": "string",
+            "example": "P1M15D"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "direction",
+          "total_days",
+          "total_weeks",
+          "calendar",
+          "iso_duration"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "date_add",
+      "title": "Add to a date",
+      "description": "Add or subtract years/months/weeks/days/business days/hours/minutes/seconds from a date. Month-end clamping; business days skip weekends, given holidays, and the public holidays of an optional country. Use for due dates, deadlines, delivery estimates, expiry and \"N working days from today\". First 25 calls per day are free, then $0.001 per call (x402).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "YYYY-MM-DD, or ISO 8601 datetime with Z or offset",
+            "example": "2026-11-07T14:30:00Z"
+          },
+          "years": {
+            "type": "integer"
+          },
+          "months": {
+            "type": "integer"
+          },
+          "weeks": {
+            "type": "integer"
+          },
+          "days": {
+            "type": "integer"
+          },
+          "business_days": {
+            "type": "integer",
+            "description": "Applied after calendar units; skips rest days (see workdays) and holidays"
+          },
+          "hours": {
+            "type": "integer"
+          },
+          "minutes": {
+            "type": "integer"
+          },
+          "seconds": {
+            "type": "integer"
+          },
+          "holidays": {
+            "type": "array",
+            "maxItems": 1000,
+            "items": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-11-07"
+            },
+            "description": "Extra dates excluded from business-day counts (rest days from workdays are always excluded)"
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}$",
+            "description": "ISO 3166-1 alpha-2 country code (207 countries); its public holidays (2000–2050) are excluded from business days",
+            "example": "US"
+          },
+          "workdays": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 7,
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            },
+            "description": "Working days of the week, 0 = Sunday. Default [1,2,3,4,5] (Mon–Fri); e.g. [0,1,2,3,4] for Sun–Thu or [1,2,3,4,5,6] for Mon–Sat",
+            "example": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          }
+        },
+        "required": [
+          "date"
+        ],
+        "description": "Negative values subtract. Months clamp to month end (Jan 31 + 1 month = Feb 28/29). Time units require a datetime input."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "input": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string",
+            "description": "YYYY-MM-DD, or ISO datetime (UTC) for datetime input"
+          },
+          "weekday": {
+            "type": "string"
+          },
+          "is_business_day": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "input",
+          "result",
+          "weekday",
+          "is_business_day"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "timezone_convert",
+      "title": "Convert time zones",
+      "description": "Convert a time between time zones (IANA names like Asia/Manila, America/New_York), DST-aware. Use for \"what time is 3pm Manila in New York\", scheduling across zones and UTC offsets. First 25 calls per day are free, then $0.001 per call (x402).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datetime": {
+            "type": "string",
+            "description": "ISO 8601 with offset, local YYYY-MM-DDTHH:MM[:SS] (needs from_timezone), or \"now\" (default)"
+          },
+          "from_timezone": {
+            "type": "string",
+            "example": "Asia/Manila"
+          },
+          "to_timezone": {
+            "type": "string",
+            "example": "America/New_York"
+          }
+        },
+        "required": [
+          "to_timezone"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "utc": {
+            "type": "string"
+          },
+          "unix_seconds": {
+            "type": "integer"
+          },
+          "from": {
+            "type": "object",
+            "properties": {
+              "timezone": {
+                "type": "string"
+              },
+              "datetime": {
+                "type": "string",
+                "description": "ISO 8601 with offset"
+              },
+              "date": {
+                "type": "string"
+              },
+              "time": {
+                "type": "string"
+              },
+              "weekday": {
+                "type": "string"
+              },
+              "utc_offset": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "timezone",
+              "datetime",
+              "date",
+              "time",
+              "weekday",
+              "utc_offset"
+            ]
+          },
+          "to": {
+            "type": "object",
+            "properties": {
+              "timezone": {
+                "type": "string"
+              },
+              "datetime": {
+                "type": "string",
+                "description": "ISO 8601 with offset"
+              },
+              "date": {
+                "type": "string"
+              },
+              "time": {
+                "type": "string"
+              },
+              "weekday": {
+                "type": "string"
+              },
+              "utc_offset": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "timezone",
+              "datetime",
+              "date",
+              "time",
+              "weekday",
+              "utc_offset"
+            ]
+          }
+        },
+        "required": [
+          "utc",
+          "unix_seconds",
+          "from",
+          "to"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "date_info",
+      "title": "Date facts",
+      "description": "Calendar facts for a date: day of the week, ISO week number, quarter, day of year, leap year, weekend. Use for \"what day is\", week numbers and fiscal quarters. First 25 calls per day are free, then $0.001 per call (x402).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-11-07"
+          }
+        },
+        "required": [
+          "date"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "weekday": {
+            "type": "string"
+          },
+          "weekday_number": {
+            "type": "integer",
+            "description": "ISO: Monday=1 … Sunday=7"
+          },
+          "iso_year": {
+            "type": "integer"
+          },
+          "iso_week": {
+            "type": "integer"
+          },
+          "quarter": {
+            "type": "integer"
+          },
+          "day_of_year": {
+            "type": "integer"
+          },
+          "days_in_year": {
+            "type": "integer"
+          },
+          "days_remaining_in_year": {
+            "type": "integer"
+          },
+          "days_in_month": {
+            "type": "integer"
+          },
+          "is_leap_year": {
+            "type": "boolean"
+          },
+          "is_weekend": {
+            "type": "boolean"
+          },
+          "unix_seconds": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "date",
+          "weekday",
+          "iso_week",
+          "quarter",
+          "day_of_year",
+          "is_leap_year",
+          "is_weekend"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "public_holidays",
+      "title": "Public holidays",
+      "description": "List public holidays (bank holidays, national holidays) for a country and year: 207 countries, 2000–2050. Use for holiday calendars, office closures and checking if a date is a holiday. Lunar or government-proclaimed dates are rule-based estimates. First 25 calls per day are free, then $0.001 per call (x402).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}$",
+            "description": "ISO 3166-1 alpha-2 country code (207 countries); its public holidays (2000–2050) are excluded from business days",
+            "example": "US"
+          },
+          "year": {
+            "type": "integer",
+            "minimum": 2000,
+            "maximum": 2050,
+            "description": "Defaults to the current year"
+          }
+        },
+        "required": [
+          "country"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "country": {
+            "type": "string"
+          },
+          "country_name": {
+            "type": "string"
+          },
+          "year": {
+            "type": "integer"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "public"
+            ]
+          },
+          "count": {
+            "type": "integer"
+          },
+          "holidays": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "date",
+                "name"
+              ],
+              "properties": {
+                "date": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "substitute": {
+                  "type": "boolean",
+                  "description": "Observed on another day because the holiday falls on a weekend"
+                }
+              }
+            }
+          },
+          "source": {
+            "type": "string",
+            "description": "Data attribution"
+          }
+        },
+        "required": [
+          "country",
+          "year",
+          "count",
+          "holidays"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "working_hours_overlap",
+      "title": "Working-hours overlap",
+      "description": "Find when working hours overlap across time zones: the best meeting times for a distributed or remote team. Per-participant hours optional; skips weekends by default; up to 14 days. First 25 calls per day are free, then $0.001 per call (x402).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "timezones": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 10,
+            "items": {
+              "type": "string",
+              "description": "IANA time zone, e.g. Asia/Manila"
+            }
+          },
+          "participants": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 10,
+            "items": {
+              "type": "object",
+              "required": [
+                "timezone"
+              ],
+              "properties": {
+                "timezone": {
+                  "type": "string",
+                  "description": "IANA time zone, e.g. Asia/Manila"
+                },
+                "work_start": {
+                  "type": "string",
+                  "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$",
+                  "example": "09:00"
+                },
+                "work_end": {
+                  "type": "string",
+                  "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$",
+                  "example": "09:00"
+                }
+              }
+            }
+          },
+          "date": {
+            "type": "string",
+            "description": "YYYY-MM-DD in the first participant's zone; defaults to today"
+          },
+          "days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 14,
+            "description": "Number of days to search (default 1)"
+          },
+          "work_start": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$",
+            "example": "09:00"
+          },
+          "work_end": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$",
+            "example": "17:00"
+          },
+          "skip_weekends": {
+            "type": "boolean",
+            "description": "Default true"
+          }
+        },
+        "description": "Pass \"timezones\" (strings) or \"participants\" (objects with their own hours)."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "reference_timezone": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "participants": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "total_overlap_minutes": {
+            "type": "number"
+          },
+          "windows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "start_utc": {
+                  "type": "string"
+                },
+                "end_utc": {
+                  "type": "string"
+                },
+                "duration_minutes": {
+                  "type": "number"
+                },
+                "local": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "timezone": {
+                        "type": "string"
+                      },
+                      "start": {
+                        "type": "string"
+                      },
+                      "end": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "reference_timezone",
+          "total_overlap_minutes",
+          "windows"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "cron_schedule",
+      "title": "Cron schedule",
+      "description": "Explain a cron expression in plain English and list its next run times in any time zone. Use to check or debug crontab and scheduled-job schedules. First 25 calls per day are free, then $0.001 per call (x402).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "expression": {
+            "type": "string",
+            "description": "5- or 6-field cron expression",
+            "example": "0 9 * * 1-5"
+          },
+          "timezone": {
+            "type": "string",
+            "description": "Default UTC"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Default 5"
+          },
+          "from": {
+            "type": "string",
+            "description": "ISO 8601 datetime with offset; default now"
+          }
+        },
+        "required": [
+          "expression"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "expression": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "next_runs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "utc": {
+                  "type": "string"
+                },
+                "local": {
+                  "type": "string"
+                },
+                "weekday": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "expression",
+          "timezone",
+          "description",
+          "next_runs"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "parse_date_text",
+      "title": "Parse natural-language dates",
+      "description": "Parse natural-language dates and relative times like \"next Friday at 3pm\", \"in 2 weeks\", \"tomorrow morning\" or \"Dec 25 to Jan 2\" into exact ISO datetimes, relative to a reference time and time zone. Use before acting on any date a user typed. First 25 calls per day are free, then $0.001 per call (x402).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 1000,
+            "example": "next friday at 3pm"
+          },
+          "timezone": {
+            "type": "string",
+            "description": "Default UTC"
+          },
+          "reference": {
+            "type": "string",
+            "description": "ISO 8601 datetime the text is relative to; default now"
+          },
+          "forward_date": {
+            "type": "boolean",
+            "description": "Prefer future dates for ambiguous text (default true)"
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "matched": {
+                  "type": "string"
+                },
+                "index": {
+                  "type": "integer"
+                },
+                "start": {
+                  "type": "object",
+                  "properties": {
+                    "utc": {
+                      "type": "string"
+                    },
+                    "local": {
+                      "type": "string"
+                    },
+                    "date": {
+                      "type": "string"
+                    },
+                    "weekday": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "utc",
+                    "local"
+                  ]
+                },
+                "end": {
+                  "type": "object",
+                  "properties": {
+                    "utc": {
+                      "type": "string"
+                    },
+                    "local": {
+                      "type": "string"
+                    },
+                    "date": {
+                      "type": "string"
+                    },
+                    "weekday": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "utc",
+                    "local"
+                  ]
+                },
+                "certain": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "text",
+          "timezone",
+          "count",
+          "results"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "city_time",
+      "title": "City time zone and local time",
+      "description": "Find the time zone and current local time in up to 10 cities by name (\"Cebu\", \"São Paulo\", \"Springfield\" + country). 7,000+ cities. Use for \"what time is it in\" questions and to get the IANA zone the other tools need. First 25 calls per day are free, then $0.001 per call (x402).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "city": {
+            "type": "string",
+            "example": "Cebu"
+          },
+          "cities": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "items": {
+              "type": "string"
+            }
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}$",
+            "description": "ISO 3166-1 alpha-2 country code (207 countries); its public holidays (2000–2050) are excluded from business days",
+            "example": "US"
+          },
+          "at": {
+            "type": "string",
+            "description": "ISO 8601 instant to show local time for; default now"
+          }
+        },
+        "description": "Pass \"city\" or \"cities\"."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "at": {
+            "type": "string"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "query": {
+                  "type": "string"
+                },
+                "found": {
+                  "type": "boolean"
+                },
+                "best": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "country": {
+                      "type": "string"
+                    },
+                    "region": {
+                      "type": "string"
+                    },
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "population": {
+                      "type": "integer"
+                    },
+                    "match": {
+                      "type": "string"
+                    },
+                    "local_time": {
+                      "type": "string"
+                    },
+                    "weekday": {
+                      "type": "string"
+                    },
+                    "utc_offset": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "alternatives": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "at",
+          "results"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "recurring_dates",
+      "title": "Expand recurring events (RRULE)",
+      "description": "Expand a recurring event or iCalendar RRULE (\"every 2nd Tuesday\", \"Mon/Wed until June\") into concrete dates and times in a time zone, DST-aware, with optional excluded dates. Use for repeating meetings, calendar invites and schedules. First 25 calls per day are free, then $0.001 per call (x402).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "rrule": {
+            "type": "string",
+            "example": "FREQ=MONTHLY;BYDAY=2TU",
+            "description": "iCalendar RRULE (no DTSTART/TZID inside)"
+          },
+          "start": {
+            "type": "string",
+            "description": "Local start date or datetime in timezone, e.g. 2026-01-01T10:00"
+          },
+          "timezone": {
+            "type": "string",
+            "description": "Default UTC"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Default 10"
+          },
+          "exclude": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Local dates (YYYY-MM-DD) to skip"
+          }
+        },
+        "required": [
+          "rrule",
+          "start"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "rrule": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "occurrences": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "local": {
+                  "type": "string"
+                },
+                "date": {
+                  "type": "string"
+                },
+                "weekday": {
+                  "type": "string"
+                },
+                "utc": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "rrule",
+          "timezone",
+          "count",
+          "occurrences"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "business_hours_deadline",
+      "title": "Business-hours deadline / SLA",
+      "description": "SLA math in working hours: the deadline N business hours after a start time, or business time elapsed between two times. Use for support-ticket SLAs, response-time targets and office-hours deadlines. Custom hours and workdays, holidays, country public holidays, DST-aware. First 25 calls per day are free, then $0.001 per call (x402).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "timezone": {
+            "type": "string",
+            "description": "IANA time zone, e.g. Asia/Manila"
+          },
+          "start": {
+            "type": "string",
+            "description": "Local datetime in timezone or ISO 8601 with offset; default now"
+          },
+          "hours": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2000
+          },
+          "minutes": {
+            "type": "number",
+            "minimum": 0
+          },
+          "end": {
+            "type": "string",
+            "description": "Count business time from start to end (max 1 year)"
+          },
+          "work_start": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$",
+            "example": "09:00"
+          },
+          "work_end": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$",
+            "example": "17:00"
+          },
+          "workdays": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            },
+            "description": "0 = Sunday; default [1,2,3,4,5]"
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}$",
+            "description": "ISO 3166-1 alpha-2 country code (207 countries); its public holidays (2000–2050) are excluded from business days",
+            "example": "US"
+          },
+          "holidays": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "timezone"
+        ],
+        "description": "Pass \"hours\"/\"minutes\" to get a deadline, or \"end\" to count business time between start and end."
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "deadline",
+              "elapsed"
+            ]
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          },
+          "business_minutes": {
+            "type": "number"
+          },
+          "business_hours": {
+            "type": "number"
+          },
+          "deadline": {
+            "type": "string"
+          },
+          "deadline_utc": {
+            "type": "string"
+          },
+          "weekday": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "timezone",
+          "start",
+          "business_minutes"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "business_day",
+      "title": "Business-day check",
+      "description": "Is a date a business day? If not, why (weekend, or which public holiday). Also the next and previous business day, and the month's business-day count, first and last business day. Use for office-open checks, shipping cut-offs, settlement dates. Country holidays, custom holidays and custom workweeks (e.g. Sun–Thu, Mon–Sat). First 25 calls per day are free, then $0.001 per call (x402).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-11-07"
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}$",
+            "description": "ISO 3166-1 alpha-2 country code (207 countries); its public holidays (2000–2050) are excluded from business days",
+            "example": "US"
+          },
+          "holidays": {
+            "type": "array",
+            "maxItems": 1000,
+            "items": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-11-07"
+            },
+            "description": "Extra dates excluded from business-day counts (rest days from workdays are always excluded)"
+          },
+          "workdays": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 7,
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            },
+            "description": "Working days of the week, 0 = Sunday. Default [1,2,3,4,5] (Mon–Fri); e.g. [0,1,2,3,4] for Sun–Thu or [1,2,3,4,5,6] for Mon–Sat",
+            "example": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          }
+        },
+        "required": [
+          "date"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "weekday": {
+            "type": "string"
+          },
+          "is_business_day": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "weekend",
+              "holiday",
+              null
+            ],
+            "description": "Why it is not a business day; null if it is"
+          },
+          "holiday": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Holiday name if the date is a holiday"
+          },
+          "next_business_day": {
+            "type": "string"
+          },
+          "previous_business_day": {
+            "type": "string"
+          },
+          "month": {
+            "type": "object",
+            "required": [
+              "business_days",
+              "first_business_day",
+              "last_business_day",
+              "business_day_number"
+            ],
+            "properties": {
+              "business_days": {
+                "type": "integer"
+              },
+              "first_business_day": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "last_business_day": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "business_day_number": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "Which business day of the month this date is (1 = first); null if not a business day"
+              }
+            }
+          }
+        },
+        "required": [
+          "date",
+          "weekday",
+          "is_business_day",
+          "reason",
+          "holiday",
+          "next_business_day",
+          "previous_business_day",
+          "month"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "pay_dates",
+      "title": "Payroll and billing dates",
+      "description": "Upcoming pay or billing dates for monthly, semi-monthly (e.g. 15th and last day), biweekly or weekly schedules, moved off weekends and public holidays (to the previous, next or nearest business day). Use for payroll calendars, invoice due dates and recurring billing. First 25 calls per day are free, then $0.001 per call (x402).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "schedule": {
+            "type": "string",
+            "enum": [
+              "monthly",
+              "semi_monthly",
+              "biweekly",
+              "weekly"
+            ]
+          },
+          "from": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-11-07"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 24,
+            "default": 6,
+            "description": "How many pay dates to return"
+          },
+          "days": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 2,
+            "items": {
+              "oneOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 31
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "last"
+                  ]
+                }
+              ]
+            },
+            "description": "monthly: 1 day, semi_monthly: 2 days of the month (1–31 or \"last\"; 31 clamps to month end). Defaults: [\"last\"] and [15, \"last\"]"
+          },
+          "anchor": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-11-07"
+          },
+          "adjust": {
+            "type": "string",
+            "enum": [
+              "previous",
+              "next",
+              "nearest",
+              "none"
+            ],
+            "default": "previous",
+            "description": "Where to move a pay date that falls on a weekend or holiday"
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}$",
+            "description": "ISO 3166-1 alpha-2 country code (207 countries); its public holidays (2000–2050) are excluded from business days",
+            "example": "US"
+          },
+          "holidays": {
+            "type": "array",
+            "maxItems": 1000,
+            "items": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-11-07"
+            },
+            "description": "Extra dates excluded from business-day counts (rest days from workdays are always excluded)"
+          },
+          "workdays": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 7,
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            },
+            "description": "Working days of the week, 0 = Sunday. Default [1,2,3,4,5] (Mon–Fri); e.g. [0,1,2,3,4] for Sun–Thu or [1,2,3,4,5,6] for Mon–Sat",
+            "example": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          }
+        },
+        "required": [
+          "schedule",
+          "from"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "schedule": {
+            "type": "string"
+          },
+          "adjust": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "pay_dates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "scheduled",
+                "pay_date",
+                "weekday",
+                "adjusted"
+              ],
+              "properties": {
+                "scheduled": {
+                  "type": "string",
+                  "description": "The nominal date (e.g. the 15th)"
+                },
+                "pay_date": {
+                  "type": "string",
+                  "description": "The actual business day to pay"
+                },
+                "weekday": {
+                  "type": "string"
+                },
+                "adjusted": {
+                  "type": "boolean"
+                },
+                "reason": {
+                  "type": "string",
+                  "description": "weekend, or holiday: <name>"
+                },
+                "is_business_day": {
+                  "type": "boolean",
+                  "description": "Only with adjust none"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "schedule",
+          "adjust",
+          "count",
+          "pay_dates"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "stay_calculator",
+      "title": "Visa stay calculator (Schengen 90/180)",
+      "description": "Rolling stay-limit math such as the Schengen 90/180 rule: days used in the window, days left, overstay check, the longest stay allowed from a planned entry date, and the next date a full stay is possible. Entry and exit days both count. Custom rules via max_days/window_days. Use for travel planning, visa-free stays and \"can I enter on\". First 25 calls per day are free, then $0.001 per call (x402).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "trips": {
+            "type": "array",
+            "maxItems": 200,
+            "description": "Past and planned stays. Entry and exit days both count as days present.",
+            "items": {
+              "type": "object",
+              "required": [
+                "entry",
+                "exit"
+              ],
+              "properties": {
+                "entry": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                  "example": "2026-11-07"
+                },
+                "exit": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                  "example": "2026-11-07"
+                }
+              }
+            }
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-11-07"
+          },
+          "entry": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-11-07"
+          },
+          "max_days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 365,
+            "default": 90
+          },
+          "window_days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 730,
+            "default": 180,
+            "description": "Length of the rolling window, counted back from each day (inclusive)"
+          }
+        },
+        "required": [
+          "trips"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "rule": {
+            "type": "object",
+            "required": [
+              "max_days",
+              "window_days",
+              "window_start",
+              "window_end"
+            ],
+            "properties": {
+              "max_days": {
+                "type": "integer"
+              },
+              "window_days": {
+                "type": "integer"
+              },
+              "window_start": {
+                "type": "string"
+              },
+              "window_end": {
+                "type": "string"
+              }
+            }
+          },
+          "days_used": {
+            "type": "integer",
+            "description": "Days present in the window ending on date"
+          },
+          "days_remaining": {
+            "type": "integer"
+          },
+          "overstay_days": {
+            "type": "integer"
+          },
+          "in_compliance": {
+            "type": "boolean"
+          },
+          "first_overstay": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "First day any trip broke the rule, or null"
+          },
+          "max_stay": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "required": [
+              "entry",
+              "days_allowed",
+              "latest_exit"
+            ],
+            "properties": {
+              "entry": {
+                "type": "string"
+              },
+              "days_allowed": {
+                "type": "integer"
+              },
+              "latest_exit": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "description": "Present when entry was given"
+          },
+          "next_full_stay_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Earliest date after date from which a full max_days stay is allowed"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "rule",
+          "days_used",
+          "days_remaining",
+          "overstay_days",
+          "in_compliance",
+          "first_overstay",
+          "max_stay",
+          "next_full_stay_date",
+          "note"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "timestamp_normalize",
+      "title": "Normalize timestamps",
+      "description": "Detect and convert up to 100 mixed timestamps to UTC ISO 8601: Unix seconds/ms/µs/ns, Excel serial dates, Windows FILETIME, ISO 8601, RFC 2822, YYYY/MM/DD, month-name dates. Flags ambiguous values (03/04/2026: March 4 or 3 April? 45000: Excel date or Unix seconds?) with alternatives. Use for cleaning CSV, log and spreadsheet data. First 25 calls per day are free, then $0.001 per call (x402).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "values": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "items": {
+              "type": [
+                "string",
+                "number"
+              ]
+            },
+            "description": "Timestamps as strings or numbers. Pass very large integers (ns) as strings."
+          },
+          "timezone": {
+            "type": "string",
+            "description": "Zone for values without an offset and for the local output (default UTC)",
+            "example": "Asia/Manila"
+          },
+          "numeric_format": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "unix_seconds",
+              "unix_ms",
+              "unix_us",
+              "unix_ns",
+              "excel",
+              "filetime"
+            ],
+            "default": "auto"
+          },
+          "date_order": {
+            "type": "string",
+            "enum": [
+              "MDY",
+              "DMY"
+            ],
+            "description": "How to read ambiguous slash dates like 03/04/2026 (default MDY, with the other reading in alternatives)"
+          }
+        },
+        "required": [
+          "values"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "timezone": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "ok": {
+            "type": "integer",
+            "description": "How many values were understood"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "input",
+                "ok"
+              ],
+              "properties": {
+                "input": {
+                  "type": [
+                    "string",
+                    "number",
+                    "object",
+                    "array",
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "ok": {
+                  "type": "boolean"
+                },
+                "format": {
+                  "type": "string"
+                },
+                "utc": {
+                  "type": "string"
+                },
+                "unix_seconds": {
+                  "type": "integer"
+                },
+                "unix_ms": {
+                  "type": "integer"
+                },
+                "local": {
+                  "type": "string"
+                },
+                "assumed_timezone": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Zone used because the value had no offset"
+                },
+                "ambiguous": {
+                  "type": "boolean"
+                },
+                "alternatives": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "format",
+                      "utc"
+                    ],
+                    "properties": {
+                      "format": {
+                        "type": "string"
+                      },
+                      "utc": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "error": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "timezone",
+          "count",
+          "ok",
+          "results"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "dst_check",
+      "title": "DST transitions and local-time check",
+      "description": "Daylight saving time for a time zone: does it observe DST, the year's exact clock changes (UTC instant, local before/after), and whether a local time is valid, skipped (spring-forward gap, e.g. 02:30) or repeated (fall-back, happens twice). Use before scheduling jobs, alarms or meetings near clock changes. First 25 calls per day are free, then $0.001 per call (x402).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "timezone": {
+            "type": "string",
+            "description": "IANA time zone, e.g. Asia/Manila",
+            "example": "Asia/Manila"
+          },
+          "datetime": {
+            "type": "string",
+            "description": "Local wall time to check, without offset: YYYY-MM-DDTHH:MM[:SS]",
+            "example": "2026-03-08T02:30"
+          },
+          "year": {
+            "type": "integer",
+            "minimum": 1900,
+            "maximum": 2100,
+            "description": "Year to list (default: the datetime's year, else the current year)"
+          }
+        },
+        "required": [
+          "timezone"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "timezone": {
+            "type": "string"
+          },
+          "year": {
+            "type": "integer"
+          },
+          "observes_dst": {
+            "type": "boolean"
+          },
+          "standard_offset": {
+            "type": "string"
+          },
+          "dst_offset": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "transitions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "at_utc",
+                "local_before",
+                "local_after",
+                "offset_before",
+                "offset_after",
+                "change_minutes",
+                "type"
+              ],
+              "properties": {
+                "at_utc": {
+                  "type": "string"
+                },
+                "local_before": {
+                  "type": "string"
+                },
+                "local_after": {
+                  "type": "string"
+                },
+                "offset_before": {
+                  "type": "string"
+                },
+                "offset_after": {
+                  "type": "string"
+                },
+                "change_minutes": {
+                  "type": "integer"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "clocks_forward",
+                    "clocks_back"
+                  ]
+                }
+              }
+            }
+          },
+          "check": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "required": [
+              "local",
+              "status",
+              "instants",
+              "resolved",
+              "note"
+            ],
+            "properties": {
+              "local": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "valid",
+                  "skipped",
+                  "repeated"
+                ]
+              },
+              "instants": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "resolved": {
+                "type": "string"
+              },
+              "note": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "required": [
+          "timezone",
+          "year",
+          "observes_dst",
+          "standard_offset",
+          "dst_offset",
+          "transitions",
+          "check"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "sla_countdown",
+      "title": "SLA countdown (business hours)",
+      "description": "Live SLA clock for a support ticket: business minutes elapsed and remaining, breached or not, and the deadline. The clock pauses outside working hours, on weekends and holidays, and during manual pauses (e.g. waiting on customer). Custom hours, workdays, country holidays, DST-aware. Use for support-agent SLA tracking and escalation. First 25 calls per day are free, then $0.001 per call (x402).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string",
+            "description": "When the SLA clock started: ISO 8601 with offset, or local YYYY-MM-DDTHH:MM in timezone"
+          },
+          "now": {
+            "type": "string",
+            "description": "Current time (default: now), same formats as start"
+          },
+          "sla_hours": {
+            "type": "number",
+            "description": "SLA target in business hours (combine with sla_minutes)"
+          },
+          "sla_minutes": {
+            "type": "number",
+            "description": "SLA target in business minutes"
+          },
+          "timezone": {
+            "type": "string",
+            "description": "IANA time zone of the support team's working hours",
+            "example": "Asia/Manila"
+          },
+          "work_start": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$",
+            "description": "Start of working hours, default 09:00"
+          },
+          "work_end": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$",
+            "description": "End of working hours, default 17:00"
+          },
+          "workdays": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 7,
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            },
+            "description": "Working days of the week, 0 = Sunday. Default [1,2,3,4,5] (Mon–Fri); e.g. [0,1,2,3,4] for Sun–Thu or [1,2,3,4,5,6] for Mon–Sat",
+            "example": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}$",
+            "description": "ISO 3166-1 alpha-2 country code (207 countries); its public holidays (2000–2050) are excluded from business days",
+            "example": "US"
+          },
+          "holidays": {
+            "type": "array",
+            "maxItems": 1000,
+            "items": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-11-07"
+            },
+            "description": "Extra dates excluded from business-day counts (rest days from workdays are always excluded)"
+          },
+          "pauses": {
+            "type": "array",
+            "maxItems": 100,
+            "description": "Manual pauses (e.g. waiting on customer), up to 100",
+            "items": {
+              "type": "object",
+              "required": [
+                "start"
+              ],
+              "properties": {
+                "start": {
+                  "type": "string",
+                  "description": "ISO 8601 with offset"
+                },
+                "end": {
+                  "type": "string",
+                  "description": "ISO 8601 with offset; omit while the pause is ongoing"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "start",
+          "timezone"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "timezone": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "now": {
+            "type": "string"
+          },
+          "sla_minutes": {
+            "type": "integer"
+          },
+          "elapsed_business_minutes": {
+            "type": "integer"
+          },
+          "remaining_business_minutes": {
+            "type": "integer"
+          },
+          "breached": {
+            "type": "boolean"
+          },
+          "breached_by_business_minutes": {
+            "type": "integer"
+          },
+          "percent_used": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "breached",
+              "paused_manual",
+              "paused_outside_hours",
+              "paused_weekend",
+              "paused_holiday"
+            ]
+          },
+          "resumes_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "When the clock restarts, if paused by working hours"
+          },
+          "deadline": {
+            "type": "string"
+          },
+          "deadline_utc": {
+            "type": "string"
+          },
+          "deadline_weekday": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "timezone",
+          "start",
+          "now",
+          "sla_minutes",
+          "elapsed_business_minutes",
+          "remaining_business_minutes",
+          "breached",
+          "breached_by_business_minutes",
+          "percent_used",
+          "status",
+          "resumes_at",
+          "deadline",
+          "deadline_utc",
+          "deadline_weekday"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "find_free_slots",
+      "title": "Find free meeting slots",
+      "description": "Find meeting times when everyone is free: intersects each participant's working hours (own time zone, workdays, country holidays) minus their busy blocks, then lists slots of the requested length. Up to 10 people, 14 days, optional buffer between meetings. Use for scheduling across calendars and time zones. First 25 calls per day are free, then $0.001 per call (x402).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "participants": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "items": {
+              "type": "object",
+              "required": [
+                "timezone"
+              ],
+              "properties": {
+                "timezone": {
+                  "type": "string",
+                  "description": "IANA time zone, e.g. Asia/Manila",
+                  "example": "Asia/Manila"
+                },
+                "busy": {
+                  "type": "array",
+                  "maxItems": 200,
+                  "description": "Busy blocks, up to 100 per person (300 total)",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "start",
+                      "end"
+                    ],
+                    "properties": {
+                      "start": {
+                        "type": "string",
+                        "description": "ISO 8601 with offset"
+                      },
+                      "end": {
+                        "type": "string",
+                        "description": "ISO 8601 with offset"
+                      }
+                    }
+                  }
+                },
+                "work_start": {
+                  "type": "string",
+                  "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$",
+                  "description": "Overrides the default work_start"
+                },
+                "work_end": {
+                  "type": "string",
+                  "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$",
+                  "description": "Overrides the default work_end"
+                },
+                "workdays": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 7,
+                  "items": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 6
+                  },
+                  "description": "Working days of the week, 0 = Sunday. Default [1,2,3,4,5] (Mon–Fri); e.g. [0,1,2,3,4] for Sun–Thu or [1,2,3,4,5,6] for Mon–Sat",
+                  "example": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ]
+                },
+                "country": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z]{2}$",
+                  "description": "ISO 3166-1 alpha-2 country code (207 countries); its public holidays (2000–2050) are excluded from business days",
+                  "example": "US"
+                },
+                "holidays": {
+                  "type": "array",
+                  "maxItems": 1000,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "example": "2026-11-07"
+                  },
+                  "description": "Extra dates excluded from business-day counts (rest days from workdays are always excluded)"
+                }
+              }
+            }
+          },
+          "duration_minutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 720
+          },
+          "from": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-11-07"
+          },
+          "days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 14,
+            "default": 5
+          },
+          "timezone": {
+            "type": "string",
+            "description": "Organizer's zone: defines the days searched and slot alignment (default: first participant's)",
+            "example": "Asia/Manila"
+          },
+          "work_start": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$",
+            "description": "Default start of working hours, 09:00"
+          },
+          "work_end": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$",
+            "description": "Default end of working hours, 17:00"
+          },
+          "step_minutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 60,
+            "default": 30,
+            "description": "Slot start alignment"
+          },
+          "buffer_minutes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 120,
+            "default": 0,
+            "description": "Free time kept around busy blocks"
+          },
+          "max_slots": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "default": 10
+          },
+          "not_before": {
+            "type": "string",
+            "description": "Earliest slot start: ISO 8601 with offset, or \"now\""
+          }
+        },
+        "required": [
+          "participants",
+          "duration_minutes"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "timezone": {
+            "type": "string"
+          },
+          "range": {
+            "type": "object",
+            "required": [
+              "start",
+              "end"
+            ],
+            "properties": {
+              "start": {
+                "type": "string"
+              },
+              "end": {
+                "type": "string"
+              }
+            }
+          },
+          "duration_minutes": {
+            "type": "integer"
+          },
+          "free_windows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "start",
+                "end",
+                "start_utc",
+                "end_utc",
+                "minutes"
+              ],
+              "properties": {
+                "start": {
+                  "type": "string"
+                },
+                "end": {
+                  "type": "string"
+                },
+                "start_utc": {
+                  "type": "string"
+                },
+                "end_utc": {
+                  "type": "string"
+                },
+                "minutes": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "count": {
+            "type": "integer"
+          },
+          "slots": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "start_utc",
+                "end_utc",
+                "local"
+              ],
+              "properties": {
+                "start_utc": {
+                  "type": "string"
+                },
+                "end_utc": {
+                  "type": "string"
+                },
+                "local": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "timezone",
+                      "start",
+                      "end"
+                    ],
+                    "properties": {
+                      "timezone": {
+                        "type": "string"
+                      },
+                      "start": {
+                        "type": "string"
+                      },
+                      "end": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "timezone",
+          "range",
+          "duration_minutes",
+          "free_windows",
+          "count",
+          "slots"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "subscription_dates",
+      "title": "Subscription renewal and proration",
+      "description": "Subscription and contract date math: current billing period, next renewal, upcoming renewals, cancel-by date for a notice period, free-trial start, and day-based proration of a price. Month-end anchors stay at month end (Jan 31, Feb 28, Mar 31). Use for SaaS billing, renewals, cancellation deadlines and refunds. First 25 calls per day are free, then $0.001 per call (x402).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-11-07"
+          },
+          "interval": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week",
+              "month",
+              "year"
+            ],
+            "default": "month"
+          },
+          "interval_count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 365,
+            "default": 1,
+            "description": "e.g. 3 with month = quarterly"
+          },
+          "as_of": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-11-07"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 24,
+            "default": 3,
+            "description": "Upcoming renewals to list"
+          },
+          "notice_days": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 365,
+            "description": "Cancellation notice period before renewal"
+          },
+          "trial_days": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 730,
+            "description": "Free trial length; billing starts after it"
+          },
+          "amount": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Price of one billing period, for proration"
+          }
+        },
+        "required": [
+          "start"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string"
+          },
+          "billing_start": {
+            "type": "string"
+          },
+          "interval": {
+            "type": "string"
+          },
+          "interval_count": {
+            "type": "integer"
+          },
+          "as_of": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "not_started",
+              "trial",
+              "active"
+            ]
+          },
+          "current_period": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "required": [
+              "number",
+              "start",
+              "end",
+              "days",
+              "days_elapsed",
+              "days_remaining"
+            ],
+            "properties": {
+              "number": {
+                "type": "integer"
+              },
+              "start": {
+                "type": "string"
+              },
+              "end": {
+                "type": "string",
+                "description": "Last day of the period (inclusive)"
+              },
+              "days": {
+                "type": "integer"
+              },
+              "days_elapsed": {
+                "type": "integer"
+              },
+              "days_remaining": {
+                "type": "integer"
+              }
+            }
+          },
+          "next_renewal": {
+            "type": "string"
+          },
+          "next_renewal_weekday": {
+            "type": "string"
+          },
+          "cancel_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Last day to cancel before the next renewal, given notice_days"
+          },
+          "cancel_by_passed": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "upcoming_renewals": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "proration": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "required": [
+              "amount",
+              "daily_rate",
+              "used",
+              "unused",
+              "ratio_unused"
+            ],
+            "properties": {
+              "amount": {
+                "type": "number"
+              },
+              "daily_rate": {
+                "type": "number"
+              },
+              "used": {
+                "type": "number"
+              },
+              "unused": {
+                "type": "number"
+              },
+              "ratio_unused": {
+                "type": "number"
+              }
+            }
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "billing_start",
+          "interval",
+          "interval_count",
+          "as_of",
+          "status",
+          "current_period",
+          "next_renewal",
+          "next_renewal_weekday",
+          "cancel_by",
+          "cancel_by_passed",
+          "upcoming_renewals",
+          "proration",
+          "note"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "market_calendar",
+      "title": "Stock market hours and holidays",
+      "description": "Stock exchange calendar for NYSE/Nasdaq, London (LSE) and Tokyo (JPX): is the market open now, today's session (early closes, lunch break), next open and close, holidays, previous/next trading day, and the trade settlement date (T+1/T+2). Use for trading agents, order timing and settlement. First 25 calls per day are free, then $0.001 per call (x402).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "exchange": {
+            "type": "string",
+            "description": "XNYS or NYSE, XNAS or NASDAQ, XLON or LSE, XTKS or TSE/JPX",
+            "example": "NYSE"
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-11-07"
+          },
+          "at": {
+            "type": "string",
+            "description": "Instant for the open/closed status: ISO 8601 with offset (default: now)"
+          },
+          "list_year": {
+            "type": "integer",
+            "minimum": 2000,
+            "maximum": 2050,
+            "description": "Also list that year's holidays and early closes"
+          }
+        },
+        "required": [
+          "exchange"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "exchange": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "weekday": {
+            "type": "string"
+          },
+          "is_trading_day": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "weekend",
+              "holiday",
+              null
+            ]
+          },
+          "holiday": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "early_close": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Reason for an early close, if any"
+          },
+          "session": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "required": [
+              "open",
+              "close",
+              "open_utc",
+              "close_utc",
+              "break"
+            ],
+            "properties": {
+              "open": {
+                "type": "string"
+              },
+              "close": {
+                "type": "string"
+              },
+              "open_utc": {
+                "type": "string"
+              },
+              "close_utc": {
+                "type": "string"
+              },
+              "break": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "required": [
+                  "start",
+                  "end"
+                ],
+                "properties": {
+                  "start": {
+                    "type": "string"
+                  },
+                  "end": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "previous_trading_day": {
+            "type": "string"
+          },
+          "next_trading_day": {
+            "type": "string"
+          },
+          "settlement": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "required": [
+              "cycle",
+              "settlement_date",
+              "note"
+            ],
+            "properties": {
+              "cycle": {
+                "type": "string"
+              },
+              "settlement_date": {
+                "type": "string"
+              },
+              "note": {
+                "type": "string"
+              }
+            }
+          },
+          "status": {
+            "type": "object",
+            "required": [
+              "at",
+              "local",
+              "is_open",
+              "phase",
+              "next_open",
+              "next_close"
+            ],
+            "properties": {
+              "at": {
+                "type": "string"
+              },
+              "local": {
+                "type": "string"
+              },
+              "is_open": {
+                "type": "boolean"
+              },
+              "phase": {
+                "type": "string",
+                "enum": [
+                  "open",
+                  "pre_open",
+                  "break",
+                  "after_close",
+                  "closed_today"
+                ]
+              },
+              "next_open": {
+                "type": "string"
+              },
+              "next_close": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "calendar": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "object",
+              "required": [
+                "date",
+                "name",
+                "type"
+              ],
+              "properties": {
+                "date": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "closed",
+                    "early_close"
+                  ]
+                },
+                "close": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "exchange",
+          "name",
+          "timezone",
+          "date",
+          "weekday",
+          "is_trading_day",
+          "reason",
+          "holiday",
+          "early_close",
+          "session",
+          "previous_trading_day",
+          "next_trading_day",
+          "settlement",
+          "status",
+          "calendar",
+          "note"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "current_time",
+      "title": "Current date and time (free)",
+      "description": "Free: the current date, time, weekday and UTC offset in up to 10 time zones, plus UTC and Unix time. Call this first whenever you need today's date; models do not know it. Does not use the daily free calls.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "timezone": {
+            "type": "string",
+            "description": "IANA time zone, e.g. Asia/Manila"
+          },
+          "timezones": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "description": "Up to 10 IANA time zones (default UTC)"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "utc": {
+            "type": "string"
+          },
+          "unix_seconds": {
+            "type": "integer"
+          },
+          "unix_ms": {
+            "type": "integer"
+          },
+          "times": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "timezone",
+                "datetime",
+                "date",
+                "time",
+                "weekday",
+                "utc_offset"
+              ],
+              "properties": {
+                "timezone": {
+                  "type": "string"
+                },
+                "datetime": {
+                  "type": "string"
+                },
+                "date": {
+                  "type": "string"
+                },
+                "time": {
+                  "type": "string"
+                },
+                "weekday": {
+                  "type": "string"
+                },
+                "utc_offset": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "utc",
+          "unix_seconds",
+          "unix_ms",
+          "times"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    }
+  ]
+}
