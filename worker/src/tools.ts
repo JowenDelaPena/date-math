@@ -249,19 +249,28 @@ export const FREE_TOOLS: FreeTool[] = [
 
 export const PAID_PATHS = TOOLS.map((t) => t.path);
 
+/** Top-level arguments that are always numbers in every tool. Clients sometimes send them as text ("5"). */
+const NUMERIC_KEYS = new Set([
+  "years", "months", "weeks", "days", "hours", "minutes", "seconds", "business_days", "count", "year", "list_year",
+  "max_days", "window_days", "interval_count", "notice_days", "trial_days", "amount",
+  "duration_minutes", "step_minutes", "buffer_minutes", "max_slots", "sla_hours", "sla_minutes",
+]);
+const NUMBER_TEXT = /^\s*-?\d+(\.\d+)?\s*$/;
+
 /** Top-level arguments where an empty list means something (no trips yet = 0 days used). */
 const EMPTY_LIST_MEANINGFUL = new Set(["trips"]);
 
 /**
- * Form-based MCP clients (e.g. Glama's inspector) send untouched optional fields as "" , null or [].
- * Treat those as "not given" so a blank form field never turns a valid call into an error.
+ * Form-based MCP clients (e.g. Glama's inspector) send untouched optional fields as "", null or [], and some
+ * clients send numbers as text. Treat blanks as "not given" and numeric text as numbers, so neither turns a
+ * valid call into an error.
  */
 export function cleanArgs(body: Record<string, unknown>): Record<string, unknown> {
   if (!body || typeof body !== "object") return body;
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(body)) {
     if (v === null || v === "" || (Array.isArray(v) && v.length === 0 && !EMPTY_LIST_MEANINGFUL.has(k))) continue;
-    out[k] = v;
+    out[k] = typeof v === "string" && NUMERIC_KEYS.has(k) && NUMBER_TEXT.test(v) ? Number(v) : v;
   }
   return out;
 }

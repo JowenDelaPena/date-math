@@ -236,3 +236,21 @@ describe("form-style arguments (blank optional fields)", () => {
     }
   });
 });
+
+describe("numbers sent as text", () => {
+  it("gives the same answer for every tool when numeric fields arrive as strings", async () => {
+    const { TOOLS } = await import("../src/tools");
+    for (const t of TOOLS) {
+      const asText = Object.fromEntries(Object.entries(t.example).map(([k, v]) => [k, typeof v === "number" ? String(v) : v]));
+      if (JSON.stringify(asText) === JSON.stringify(t.example)) continue;
+      const strip = (o: any) => JSON.parse(JSON.stringify(o, (k, v) => (["at", "now", "utc", "unix_ms", "unix_seconds", "local_time", "from"].includes(k) && ["city_time", "cron_schedule"].includes(t.name) ? undefined : v))); // these echo the current time
+      expect(strip(t.run(asText)), t.name).toEqual(strip(t.run(t.example)));
+    }
+  });
+
+  it("leaves text fields alone", async () => {
+    const { TOOLS } = await import("../src/tools");
+    const parse = TOOLS.find((t) => t.name === "parse_date_text")!;
+    expect(() => parse.run({ text: "5", timezone: "UTC", reference: "2026-11-07T00:00:00Z" })).not.toThrow(/must be a string/);
+  });
+});
