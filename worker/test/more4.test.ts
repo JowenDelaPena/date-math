@@ -214,3 +214,25 @@ describe("landing page", () => {
     }
   });
 });
+
+describe("form-style arguments (blank optional fields)", () => {
+  it("current_time accepts timezone with an empty timezones list, or both together", () => {
+    expect(currentTime({ timezone: "Asia/Manila", timezones: [] }).times.map((t) => t.timezone)).toEqual(["Asia/Manila"]);
+    expect(currentTime({ timezone: "Asia/Manila", timezones: ["Europe/London"] }).times.map((t) => t.timezone)).toEqual(["Asia/Manila", "Europe/London"]);
+  });
+
+  it("every tool still works when untouched optional fields arrive as [] or \"\"", async () => {
+    const { FREE_TOOLS, TOOLS } = await import("../src/tools");
+    const { inputSchemaFor } = await import("../src/payments");
+    const tools = [...TOOLS.map((t) => ({ t, schema: inputSchemaFor(t.path) as any })), ...FREE_TOOLS.map((t) => ({ t, schema: t.inputSchema as any }))];
+    for (const { t, schema } of tools) {
+      const body: Record<string, unknown> = { ...t.example };
+      for (const [k, prop] of Object.entries<any>(schema.properties ?? {})) {
+        if (k in body) continue;
+        const types = [prop.type].flat();
+        body[k] = types.includes("array") ? [] : types.includes("string") || prop.pattern || prop.$ref ? "" : null;
+      }
+      expect(() => t.run(body), `${t.name} ${JSON.stringify(body)}`).not.toThrow();
+    }
+  });
+});

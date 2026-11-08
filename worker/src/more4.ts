@@ -604,9 +604,11 @@ export function marketCalendar(body: Record<string, unknown>) {
 // ---------- current_time (free) ----------
 
 export function currentTime(body: Record<string, unknown>) {
-  let zones: unknown = body.timezones ?? (body.timezone !== undefined ? [body.timezone] : ["UTC"]);
-  if (typeof zones === "string") zones = zones.split(",").map((s) => s.trim()).filter(Boolean);
-  if (!Array.isArray(zones) || zones.length === 0 || zones.length > 10) throw new InputError("invalid_timezone", 'pass "timezone" (an IANA name) or "timezones" (1–10 names), e.g. "Asia/Manila"');
+  // Accept timezone, timezones (array or comma-separated string), or both; default UTC.
+  const list = (v: unknown): unknown[] => (v === undefined ? [] : typeof v === "string" ? v.split(",").map((s) => s.trim()).filter(Boolean) : Array.isArray(v) ? v : [v]);
+  let zones = [...new Set([...list(body.timezone), ...list(body.timezones)])];
+  if (zones.length === 0) zones = ["UTC"];
+  if (zones.length > 10) throw new InputError("invalid_timezone", 'pass "timezone" (an IANA name) or "timezones" (1–10 names), e.g. "Asia/Manila"');
   const now = new Date();
   return {
     utc: isoZ(now.getTime()),

@@ -248,3 +248,26 @@ export const FREE_TOOLS: FreeTool[] = [
 ];
 
 export const PAID_PATHS = TOOLS.map((t) => t.path);
+
+/** Top-level arguments where an empty list means something (no trips yet = 0 days used). */
+const EMPTY_LIST_MEANINGFUL = new Set(["trips"]);
+
+/**
+ * Form-based MCP clients (e.g. Glama's inspector) send untouched optional fields as "" , null or [].
+ * Treat those as "not given" so a blank form field never turns a valid call into an error.
+ */
+export function cleanArgs(body: Record<string, unknown>): Record<string, unknown> {
+  if (!body || typeof body !== "object") return body;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(body)) {
+    if (v === null || v === "" || (Array.isArray(v) && v.length === 0 && !EMPTY_LIST_MEANINGFUL.has(k))) continue;
+    out[k] = v;
+  }
+  return out;
+}
+
+// Every caller (HTTP, MCP paid and free, warm-up) goes through t.run, so clean arguments here once.
+for (const t of [...TOOLS, ...FREE_TOOLS]) {
+  const run = t.run;
+  t.run = (body) => run(cleanArgs(body));
+}
