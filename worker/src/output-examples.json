@@ -99,7 +99,7 @@
     "expression": "0 9 * * 1-5",
     "timezone": "Asia/Manila",
     "description": "At 09:00, Monday through Friday",
-    "from": "2026-11-08T01:13:09.098Z",
+    "from": "2026-11-08T01:55:08.825Z",
     "next_runs": [
       {
         "utc": "2026-11-09T01:00:00Z",
@@ -130,7 +130,7 @@
     ]
   },
   "/v1/city": {
-    "at": "2026-11-08T01:13:09.465Z",
+    "at": "2026-11-08T01:55:09.445Z",
     "results": [
       {
         "query": "Cebu",
@@ -142,7 +142,7 @@
           "timezone": "Asia/Manila",
           "population": 806817,
           "match": "exact",
-          "local_time": "2026-11-08T09:13:09+08:00",
+          "local_time": "2026-11-08T09:55:09+08:00",
           "weekday": "Sunday",
           "utc_offset": "+08:00"
         },
@@ -266,5 +266,118 @@
       "resolved": "2026-03-08T03:30:00-04:00",
       "note": "This local time does not exist: clocks jump forward 60 minutes. Most systems shift it forward to 03:30."
     }
+  },
+  "/v1/sla": {
+    "timezone": "Asia/Manila",
+    "start": "2026-11-06T16:00:00+08:00",
+    "now": "2026-11-09T10:30:00+08:00",
+    "sla_minutes": 240,
+    "elapsed_business_minutes": 120,
+    "remaining_business_minutes": 120,
+    "breached": false,
+    "breached_by_business_minutes": 0,
+    "percent_used": 50,
+    "status": "running",
+    "resumes_at": null,
+    "deadline": "2026-11-09T12:30:00+08:00",
+    "deadline_utc": "2026-11-09T04:30:00Z",
+    "deadline_weekday": "Monday"
+  },
+  "/v1/free_slots": {
+    "timezone": "Asia/Manila",
+    "range": {
+      "start": "2026-11-10T00:00:00+08:00",
+      "end": "2026-11-12T00:00:00+08:00"
+    },
+    "duration_minutes": 30,
+    "free_windows": [
+      {
+        "start": "2026-11-10T16:00:00+08:00",
+        "end": "2026-11-10T17:00:00+08:00",
+        "start_utc": "2026-11-10T08:00:00Z",
+        "end_utc": "2026-11-10T09:00:00Z",
+        "minutes": 60
+      }
+    ],
+    "count": 3,
+    "slots": [
+      {
+        "start_utc": "2026-11-10T08:00:00Z",
+        "end_utc": "2026-11-10T08:30:00Z",
+        "local": [
+          {
+            "timezone": "Asia/Manila",
+            "start": "2026-11-10T16:00:00+08:00",
+            "end": "2026-11-10T16:30:00+08:00"
+          }
+        ]
+      }
+    ]
+  },
+  "/v1/subscription": {
+    "start": "2026-01-31",
+    "billing_start": "2026-01-31",
+    "interval": "month",
+    "interval_count": 1,
+    "as_of": "2026-03-10",
+    "status": "active",
+    "current_period": {
+      "number": 2,
+      "start": "2026-02-28",
+      "end": "2026-03-30",
+      "days": 31,
+      "days_elapsed": 10,
+      "days_remaining": 21
+    },
+    "next_renewal": "2026-03-31",
+    "next_renewal_weekday": "Tuesday",
+    "cancel_by": "2026-03-24",
+    "cancel_by_passed": false,
+    "upcoming_renewals": [
+      "2026-03-31"
+    ],
+    "proration": {
+      "amount": 30,
+      "daily_rate": 0.967742,
+      "used": 9.68,
+      "unused": 20.32,
+      "ratio_unused": 0.677419
+    },
+    "note": "Renewals are measured from the first billing date, so month-end anchors stay at month end (Jan 31 -> Feb 28 -> Mar 31). Proration is by whole days as of the start of as_of."
+  },
+  "/v1/market": {
+    "exchange": "XNYS",
+    "name": "New York Stock Exchange (same holidays as Nasdaq)",
+    "timezone": "America/New_York",
+    "date": "2026-11-27",
+    "weekday": "Friday",
+    "is_trading_day": true,
+    "reason": null,
+    "holiday": null,
+    "early_close": "Day after Thanksgiving",
+    "session": {
+      "open": "2026-11-27T09:30:00-05:00",
+      "close": "2026-11-27T13:00:00-05:00",
+      "open_utc": "2026-11-27T14:30:00Z",
+      "close_utc": "2026-11-27T18:00:00Z",
+      "break": null
+    },
+    "previous_trading_day": "2026-11-25",
+    "next_trading_day": "2026-11-30",
+    "settlement": {
+      "cycle": "T+1",
+      "settlement_date": "2026-11-30",
+      "note": "US equities settle T+1 (since 2024-05-28); settlement also skips Columbus Day and Veterans Day, when markets are open but banks are closed."
+    },
+    "status": {
+      "at": "2026-11-27T17:00:00Z",
+      "local": "2026-11-27T12:00:00-05:00",
+      "is_open": true,
+      "phase": "open",
+      "next_open": "2026-11-30T14:30:00Z",
+      "next_close": "2026-11-27T18:00:00Z"
+    },
+    "calendar": null,
+    "note": "Regular sessions only (no pre/after-hours). Unscheduled closures (e.g. national mourning days) are added when announced."
   }
 }

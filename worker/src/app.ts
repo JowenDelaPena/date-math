@@ -2,11 +2,11 @@ import { Hono, type Context } from "hono";
 import { SUPPORTED_PROTOCOL_VERSIONS } from "@modelcontextprotocol/sdk/types.js";
 import { InputError } from "./errors";
 import spec from "./openapi.json";
-import { TOOLS } from "./tools";
+import { FREE_TOOLS, TOOLS } from "./tools";
 
 // The free API (no payments). index.ts wraps it with x402 for direct paid access and adds /mcp.
 export const SERVICE = "date-math";
-export const VERSION = "1.6.0";
+export const VERSION = "1.7.0";
 export const ORIGIN = "https://date-math.datemath.workers.dev";
 const specBody = JSON.stringify(spec);
 
@@ -46,7 +46,7 @@ app.get("/", (c) =>
     spec: "/openapi.json",
     mcp: `${ORIGIN}/mcp (Streamable HTTP; first 25 tool calls per day free, then paid per call via x402 MCP)`,
     endpoints: Object.fromEntries(TOOLS.map((t) => [`POST ${t.path}`, { mcp_tool: t.name, description: t.description, example: t.example }])),
-    free: ["GET /v1/version", "GET /v1/health", "GET /openapi.json", "GET /llms.txt", "GET /.well-known/x402", "GET /mcp/server-card", "GET /.well-known/ai-catalog.json"],
+    free: [...FREE_TOOLS.map((f) => `GET ${f.path} (MCP: ${f.name}): ${f.description}`), "GET /v1/version", "GET /v1/health", "GET /openapi.json", "GET /llms.txt", "GET /.well-known/x402", "GET /mcp/server-card", "GET /.well-known/ai-catalog.json"],
     errors: '{"error":{"code","message","example"}} with HTTP 400/404/413; example is a valid request body for that tool',
     payment:
       "Pay per call with x402 v2 (USDC on Base, $0.001). POST without payment returns 402 with terms in the PAYMENT-REQUIRED header; retry with PAYMENT-SIGNATURE.",
@@ -102,6 +102,7 @@ ${TOOLS.map((t) => `- [POST ${t.path}](${ORIGIN}/openapi.json) (MCP: ${t.name}):
 
 ## Free
 
+${FREE_TOOLS.map((f) => `- [GET ${f.path}](${ORIGIN}${f.path}) (MCP: ${f.name}): ${f.description} Query: ?timezones=Asia/Manila,America/New_York`).join("\n")}
 - [OpenAPI spec](${ORIGIN}/openapi.json)
 - [x402 resources](${ORIGIN}/.well-known/x402)
 - [MCP server card](${ORIGIN}/mcp/server-card) · [AI catalog](${ORIGIN}/.well-known/ai-catalog.json)
@@ -110,12 +111,14 @@ ${TOOLS.map((t) => `- [POST ${t.path}](${ORIGIN}/openapi.json) (MCP: ${t.name}):
 app.get("/llms.txt", (c) => c.text(LLMS_TXT));
 
 for (const t of TOOLS) app.post(t.path, async (c) => c.json(t.run(parseBody(await c.req.text())) as object));
+// Free tools: GET with query parameters (never paid; not in PAID_PATHS, so x402 skips them).
+for (const f of FREE_TOOLS) app.get(f.path, (c) => c.json(f.run({ timezones: c.req.query("timezones") ?? c.req.query("timezone") }) as object));
 
 app.notFound((c) => fail(c, 404, "not_found", `no route for ${c.req.method} ${c.req.path}; see /openapi.json`));
 app.onError((err, c) => {
   if (err instanceof InputError) {
     // Hand back a known-good body so agents can correct themselves instead of giving up.
-    const example = TOOLS.find((t) => t.path === c.req.path)?.example;
+    const example = [...TOOLS, ...FREE_TOOLS].find((t) => t.path === c.req.path)?.example;
     return c.json({ error: { code: err.code, message: err.message, ...(example ? { example } : {}) } }, err.code === "body_too_large" ? 413 : 400);
   }
   console.error(err);

@@ -80,12 +80,12 @@ describe("discovery", () => {
   it("serves /.well-known/x402, /llms.txt and an OpenAPI with x-payment-info", async () => {
     const wk = await (await call("/.well-known/x402")).json();
     expect(wk.version).toBe(1);
-    expect(wk.resources).toHaveLength(16);
+    expect(wk.resources).toHaveLength(20);
     expect((await call("/llms.txt")).status).toBe(200);
     const spec = await (await call("/openapi.json")).json();
     expect(spec.info["x-guidance"]).toContain("POST /v1/diff");
     expect(spec["x-discovery"]).toBeUndefined();
-    for (const p of ["/v1/diff", "/v1/add", "/v1/convert", "/v1/info", "/v1/holidays", "/v1/overlap", "/v1/cron", "/v1/parse", "/v1/city", "/v1/recurrence", "/v1/business_hours", "/v1/business_day", "/v1/pay_dates", "/v1/stay", "/v1/timestamp", "/v1/dst"]) {
+    for (const p of ["/v1/diff", "/v1/add", "/v1/convert", "/v1/info", "/v1/holidays", "/v1/overlap", "/v1/cron", "/v1/parse", "/v1/city", "/v1/recurrence", "/v1/business_hours", "/v1/business_day", "/v1/pay_dates", "/v1/stay", "/v1/timestamp", "/v1/dst", "/v1/sla", "/v1/free_slots", "/v1/subscription", "/v1/market"]) {
       expect(spec.paths[p].post["x-payment-info"]).toEqual({ price: { mode: "fixed", currency: "USD", amount: "0.001" }, protocols: [{ x402: {} }] });
       expect(spec.paths[p].post.responses["200"].content["application/json"].schema.properties).toBeTruthy();
       expect(spec.paths[p].post.responses["402"]).toEqual({ description: "Payment Required" });

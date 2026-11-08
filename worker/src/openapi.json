@@ -2,9 +2,9 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Date Math",
-    "version": "1.6.0",
+    "version": "1.7.0",
     "description": "Deterministic date and time math for AI agents: date differences, business days, date arithmetic, time zone conversion and calendar facts. Paid per call via x402 (USDC on Base, $0.001); probes and spec are free. All inputs are JSON bodies; all responses are JSON objects. Errors return {\"error\":{\"code\",\"message\",\"example\"}}.",
-    "x-guidance": "Date Math does exact date and time arithmetic so you don't have to. Every tool is POST with a JSON body, returns a JSON object, and costs $0.001 (x402, USDC on Base). POST /v1/diff: days/weeks/months/business days between two dates (pass country, e.g. \"US\", to skip its public holidays). POST /v1/add: the date N days/weeks/months/business days before or after a date. POST /v1/convert: a time in another IANA time zone (DST-aware). POST /v1/info: weekday, ISO week, quarter or leap-year status of a date. POST /v1/holidays: a country's public holidays for a year. POST /v1/overlap: when working hours overlap across time zones (meeting slots). POST /v1/cron: explain a cron expression and list its next runs. POST /v1/parse: turn text like \"next Friday at 3pm\" into an exact datetime. POST /v1/city: the time zone and local time of a city by name. POST /v1/recurrence: concrete dates for an iCal RRULE (\"every 2nd Tuesday\"). POST /v1/business_hours: SLA deadline N working hours from now, or working hours elapsed. POST /v1/business_day: is a date a business day (and if not, which holiday), plus the next/previous business day. POST /v1/pay_dates: payroll or billing dates (monthly, 15th and last, biweekly, weekly) moved off weekends and holidays. POST /v1/stay: Schengen-style 90/180 stay limits (days used, days left, longest stay from an entry date). POST /v1/timestamp: convert mixed Unix/Excel/ISO/slash-date timestamps to UTC and flag ambiguous ones. POST /v1/dst: a zone's DST clock changes and whether a local time is skipped or repeated. Business-day tools accept workdays (e.g. [0,1,2,3,4] for Sun–Thu). Dates are YYYY-MM-DD; datetimes are ISO 8601 with Z or an offset; time zones are IANA names. Errors return HTTP 400 with {\"error\":{\"code\",\"message\",\"example\"}}; example is a valid body for that tool. Also available as an MCP server at /mcp.",
+    "x-guidance": "Date Math does exact date and time arithmetic so you don't have to. Every tool is POST with a JSON body, returns a JSON object, and costs $0.001 (x402, USDC on Base). POST /v1/diff: days/weeks/months/business days between two dates (pass country, e.g. \"US\", to skip its public holidays). POST /v1/add: the date N days/weeks/months/business days before or after a date. POST /v1/convert: a time in another IANA time zone (DST-aware). POST /v1/info: weekday, ISO week, quarter or leap-year status of a date. POST /v1/holidays: a country's public holidays for a year. POST /v1/overlap: when working hours overlap across time zones (meeting slots). POST /v1/cron: explain a cron expression and list its next runs. POST /v1/parse: turn text like \"next Friday at 3pm\" into an exact datetime. POST /v1/city: the time zone and local time of a city by name. POST /v1/recurrence: concrete dates for an iCal RRULE (\"every 2nd Tuesday\"). POST /v1/business_hours: SLA deadline N working hours from now, or working hours elapsed. POST /v1/business_day: is a date a business day (and if not, which holiday), plus the next/previous business day. POST /v1/pay_dates: payroll or billing dates (monthly, 15th and last, biweekly, weekly) moved off weekends and holidays. POST /v1/stay: Schengen-style 90/180 stay limits (days used, days left, longest stay from an entry date). POST /v1/timestamp: convert mixed Unix/Excel/ISO/slash-date timestamps to UTC and flag ambiguous ones. POST /v1/dst: a zone's DST clock changes and whether a local time is skipped or repeated. POST /v1/sla: support-ticket SLA clock (business minutes elapsed/remaining, breached, deadline; pauses outside hours). POST /v1/free_slots: meeting slots when every participant is free (working hours per zone minus busy blocks). POST /v1/subscription: billing period, next renewal, cancel-by date and proration. POST /v1/market: NYSE/Nasdaq/LSE/Tokyo hours, holidays, open now, settlement date. Free: GET /v1/now returns the current date and time (call it when you need today's date). Business-day tools accept workdays (e.g. [0,1,2,3,4] for Sun–Thu). Dates are YYYY-MM-DD; datetimes are ISO 8601 with Z or an offset; time zones are IANA names. Errors return HTTP 400 with {\"error\":{\"code\",\"message\",\"example\"}}; example is a valid body for that tool. Also available as an MCP server at /mcp.",
     "contact": {
       "email": "jowendelapena2003@gmail.com"
     }
@@ -2414,6 +2414,1102 @@
           },
           "402": {
             "description": "Payment Required"
+          }
+        }
+      }
+    },
+    "/v1/sla": {
+      "post": {
+        "operationId": "slaCountdown",
+        "summary": "SLA clock in business time: elapsed, remaining, breached, deadline; pauses outside hours and during manual pauses",
+        "tags": [
+          "Business time"
+        ],
+        "x-payment-info": {
+          "price": {
+            "mode": "fixed",
+            "currency": "USD",
+            "amount": "0.001"
+          },
+          "protocols": [
+            {
+              "x402": {}
+            }
+          ]
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "start",
+                  "timezone"
+                ],
+                "properties": {
+                  "start": {
+                    "type": "string",
+                    "description": "When the SLA clock started: ISO 8601 with offset, or local YYYY-MM-DDTHH:MM in timezone"
+                  },
+                  "now": {
+                    "type": "string",
+                    "description": "Current time (default: now), same formats as start"
+                  },
+                  "sla_hours": {
+                    "type": "number",
+                    "description": "SLA target in business hours (combine with sla_minutes)"
+                  },
+                  "sla_minutes": {
+                    "type": "number",
+                    "description": "SLA target in business minutes"
+                  },
+                  "timezone": {
+                    "type": "string",
+                    "description": "IANA time zone of the support team's working hours",
+                    "example": "Asia/Manila"
+                  },
+                  "work_start": {
+                    "type": "string",
+                    "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$",
+                    "description": "Start of working hours, default 09:00"
+                  },
+                  "work_end": {
+                    "type": "string",
+                    "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$",
+                    "description": "End of working hours, default 17:00"
+                  },
+                  "workdays": {
+                    "$ref": "#/components/schemas/Workdays"
+                  },
+                  "country": {
+                    "$ref": "#/components/schemas/Country"
+                  },
+                  "holidays": {
+                    "$ref": "#/components/schemas/Holidays"
+                  },
+                  "pauses": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "description": "Manual pauses (e.g. waiting on customer), up to 100",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "start"
+                      ],
+                      "properties": {
+                        "start": {
+                          "type": "string",
+                          "description": "ISO 8601 with offset"
+                        },
+                        "end": {
+                          "type": "string",
+                          "description": "ISO 8601 with offset; omit while the pause is ongoing"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "example": {
+                "start": "2026-11-06T16:00",
+                "now": "2026-11-09T10:30",
+                "sla_hours": 4,
+                "timezone": "Asia/Manila",
+                "country": "PH",
+                "pauses": [
+                  {
+                    "start": "2026-11-09T01:00:00Z",
+                    "end": "2026-11-09T01:30:00Z"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "timezone",
+                    "start",
+                    "now",
+                    "sla_minutes",
+                    "elapsed_business_minutes",
+                    "remaining_business_minutes",
+                    "breached",
+                    "breached_by_business_minutes",
+                    "percent_used",
+                    "status",
+                    "resumes_at",
+                    "deadline",
+                    "deadline_utc",
+                    "deadline_weekday"
+                  ],
+                  "properties": {
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "start": {
+                      "type": "string"
+                    },
+                    "now": {
+                      "type": "string"
+                    },
+                    "sla_minutes": {
+                      "type": "integer"
+                    },
+                    "elapsed_business_minutes": {
+                      "type": "integer"
+                    },
+                    "remaining_business_minutes": {
+                      "type": "integer"
+                    },
+                    "breached": {
+                      "type": "boolean"
+                    },
+                    "breached_by_business_minutes": {
+                      "type": "integer"
+                    },
+                    "percent_used": {
+                      "type": "number"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "running",
+                        "breached",
+                        "paused_manual",
+                        "paused_outside_hours",
+                        "paused_weekend",
+                        "paused_holiday"
+                      ]
+                    },
+                    "resumes_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "When the clock restarts, if paused by working hours"
+                    },
+                    "deadline": {
+                      "type": "string"
+                    },
+                    "deadline_utc": {
+                      "type": "string"
+                    },
+                    "deadline_weekday": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "Payment Required"
+          }
+        }
+      }
+    },
+    "/v1/free_slots": {
+      "post": {
+        "operationId": "findFreeSlots",
+        "summary": "Meeting slots when everyone is free: working hours per time zone minus busy blocks",
+        "tags": [
+          "Time zones"
+        ],
+        "x-payment-info": {
+          "price": {
+            "mode": "fixed",
+            "currency": "USD",
+            "amount": "0.001"
+          },
+          "protocols": [
+            {
+              "x402": {}
+            }
+          ]
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "participants",
+                  "duration_minutes"
+                ],
+                "properties": {
+                  "participants": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 10,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "timezone"
+                      ],
+                      "properties": {
+                        "timezone": {
+                          "type": "string",
+                          "description": "IANA time zone, e.g. Asia/Manila",
+                          "example": "Asia/Manila"
+                        },
+                        "busy": {
+                          "type": "array",
+                          "maxItems": 200,
+                          "description": "Busy blocks, up to 100 per person (300 total)",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "start",
+                              "end"
+                            ],
+                            "properties": {
+                              "start": {
+                                "type": "string",
+                                "description": "ISO 8601 with offset"
+                              },
+                              "end": {
+                                "type": "string",
+                                "description": "ISO 8601 with offset"
+                              }
+                            }
+                          }
+                        },
+                        "work_start": {
+                          "type": "string",
+                          "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$",
+                          "description": "Overrides the default work_start"
+                        },
+                        "work_end": {
+                          "type": "string",
+                          "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$",
+                          "description": "Overrides the default work_end"
+                        },
+                        "workdays": {
+                          "$ref": "#/components/schemas/Workdays"
+                        },
+                        "country": {
+                          "$ref": "#/components/schemas/Country"
+                        },
+                        "holidays": {
+                          "$ref": "#/components/schemas/Holidays"
+                        }
+                      }
+                    }
+                  },
+                  "duration_minutes": {
+                    "type": "integer",
+                    "minimum": 5,
+                    "maximum": 720
+                  },
+                  "from": {
+                    "$ref": "#/components/schemas/Date",
+                    "description": "First day to search, in timezone (default: today)"
+                  },
+                  "days": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 14,
+                    "default": 5
+                  },
+                  "timezone": {
+                    "type": "string",
+                    "description": "Organizer's zone: defines the days searched and slot alignment (default: first participant's)",
+                    "example": "Asia/Manila"
+                  },
+                  "work_start": {
+                    "type": "string",
+                    "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$",
+                    "description": "Default start of working hours, 09:00"
+                  },
+                  "work_end": {
+                    "type": "string",
+                    "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$",
+                    "description": "Default end of working hours, 17:00"
+                  },
+                  "step_minutes": {
+                    "type": "integer",
+                    "minimum": 5,
+                    "maximum": 60,
+                    "default": 30,
+                    "description": "Slot start alignment"
+                  },
+                  "buffer_minutes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 120,
+                    "default": 0,
+                    "description": "Free time kept around busy blocks"
+                  },
+                  "max_slots": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 50,
+                    "default": 10
+                  },
+                  "not_before": {
+                    "type": "string",
+                    "description": "Earliest slot start: ISO 8601 with offset, or \"now\""
+                  }
+                }
+              },
+              "example": {
+                "participants": [
+                  {
+                    "timezone": "Asia/Manila",
+                    "busy": [
+                      {
+                        "start": "2026-11-10T01:00:00Z",
+                        "end": "2026-11-10T02:00:00Z"
+                      }
+                    ]
+                  },
+                  {
+                    "timezone": "Europe/London",
+                    "work_start": "08:00",
+                    "work_end": "16:00"
+                  }
+                ],
+                "from": "2026-11-10",
+                "days": 2,
+                "duration_minutes": 30,
+                "max_slots": 3
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "timezone",
+                    "range",
+                    "duration_minutes",
+                    "free_windows",
+                    "count",
+                    "slots"
+                  ],
+                  "properties": {
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "range": {
+                      "type": "object",
+                      "required": [
+                        "start",
+                        "end"
+                      ],
+                      "properties": {
+                        "start": {
+                          "type": "string"
+                        },
+                        "end": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "duration_minutes": {
+                      "type": "integer"
+                    },
+                    "free_windows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "start",
+                          "end",
+                          "start_utc",
+                          "end_utc",
+                          "minutes"
+                        ],
+                        "properties": {
+                          "start": {
+                            "type": "string"
+                          },
+                          "end": {
+                            "type": "string"
+                          },
+                          "start_utc": {
+                            "type": "string"
+                          },
+                          "end_utc": {
+                            "type": "string"
+                          },
+                          "minutes": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "slots": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "start_utc",
+                          "end_utc",
+                          "local"
+                        ],
+                        "properties": {
+                          "start_utc": {
+                            "type": "string"
+                          },
+                          "end_utc": {
+                            "type": "string"
+                          },
+                          "local": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "timezone",
+                                "start",
+                                "end"
+                              ],
+                              "properties": {
+                                "timezone": {
+                                  "type": "string"
+                                },
+                                "start": {
+                                  "type": "string"
+                                },
+                                "end": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "Payment Required"
+          }
+        }
+      }
+    },
+    "/v1/subscription": {
+      "post": {
+        "operationId": "subscriptionDates",
+        "summary": "Billing period, next renewal, cancel-by date, trial and proration for a subscription",
+        "tags": [
+          "Date arithmetic"
+        ],
+        "x-payment-info": {
+          "price": {
+            "mode": "fixed",
+            "currency": "USD",
+            "amount": "0.001"
+          },
+          "protocols": [
+            {
+              "x402": {}
+            }
+          ]
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "start"
+                ],
+                "properties": {
+                  "start": {
+                    "$ref": "#/components/schemas/Date",
+                    "description": "Subscription start date"
+                  },
+                  "interval": {
+                    "type": "string",
+                    "enum": [
+                      "day",
+                      "week",
+                      "month",
+                      "year"
+                    ],
+                    "default": "month"
+                  },
+                  "interval_count": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 365,
+                    "default": 1,
+                    "description": "e.g. 3 with month = quarterly"
+                  },
+                  "as_of": {
+                    "$ref": "#/components/schemas/Date",
+                    "description": "Date to evaluate (default: today, UTC)"
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 24,
+                    "default": 3,
+                    "description": "Upcoming renewals to list"
+                  },
+                  "notice_days": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 365,
+                    "description": "Cancellation notice period before renewal"
+                  },
+                  "trial_days": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 730,
+                    "description": "Free trial length; billing starts after it"
+                  },
+                  "amount": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Price of one billing period, for proration"
+                  }
+                }
+              },
+              "example": {
+                "start": "2026-01-31",
+                "interval": "month",
+                "as_of": "2026-03-10",
+                "notice_days": 7,
+                "amount": 30
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "start",
+                    "billing_start",
+                    "interval",
+                    "interval_count",
+                    "as_of",
+                    "status",
+                    "current_period",
+                    "next_renewal",
+                    "next_renewal_weekday",
+                    "cancel_by",
+                    "cancel_by_passed",
+                    "upcoming_renewals",
+                    "proration",
+                    "note"
+                  ],
+                  "properties": {
+                    "start": {
+                      "type": "string"
+                    },
+                    "billing_start": {
+                      "type": "string"
+                    },
+                    "interval": {
+                      "type": "string"
+                    },
+                    "interval_count": {
+                      "type": "integer"
+                    },
+                    "as_of": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "not_started",
+                        "trial",
+                        "active"
+                      ]
+                    },
+                    "current_period": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "required": [
+                        "number",
+                        "start",
+                        "end",
+                        "days",
+                        "days_elapsed",
+                        "days_remaining"
+                      ],
+                      "properties": {
+                        "number": {
+                          "type": "integer"
+                        },
+                        "start": {
+                          "type": "string"
+                        },
+                        "end": {
+                          "type": "string",
+                          "description": "Last day of the period (inclusive)"
+                        },
+                        "days": {
+                          "type": "integer"
+                        },
+                        "days_elapsed": {
+                          "type": "integer"
+                        },
+                        "days_remaining": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "next_renewal": {
+                      "type": "string"
+                    },
+                    "next_renewal_weekday": {
+                      "type": "string"
+                    },
+                    "cancel_by": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Last day to cancel before the next renewal, given notice_days"
+                    },
+                    "cancel_by_passed": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "upcoming_renewals": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "proration": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "required": [
+                        "amount",
+                        "daily_rate",
+                        "used",
+                        "unused",
+                        "ratio_unused"
+                      ],
+                      "properties": {
+                        "amount": {
+                          "type": "number"
+                        },
+                        "daily_rate": {
+                          "type": "number"
+                        },
+                        "used": {
+                          "type": "number"
+                        },
+                        "unused": {
+                          "type": "number"
+                        },
+                        "ratio_unused": {
+                          "type": "number"
+                        }
+                      }
+                    },
+                    "note": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "Payment Required"
+          }
+        }
+      }
+    },
+    "/v1/market": {
+      "post": {
+        "operationId": "marketCalendar",
+        "summary": "Stock exchange hours, holidays, early closes, open/closed now, next open/close, settlement date",
+        "tags": [
+          "Markets"
+        ],
+        "x-payment-info": {
+          "price": {
+            "mode": "fixed",
+            "currency": "USD",
+            "amount": "0.001"
+          },
+          "protocols": [
+            {
+              "x402": {}
+            }
+          ]
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "exchange"
+                ],
+                "properties": {
+                  "exchange": {
+                    "type": "string",
+                    "description": "XNYS or NYSE, XNAS or NASDAQ, XLON or LSE, XTKS or TSE/JPX",
+                    "example": "NYSE"
+                  },
+                  "date": {
+                    "$ref": "#/components/schemas/Date",
+                    "description": "Exchange-local date to describe (default: the local date at `at`)"
+                  },
+                  "at": {
+                    "type": "string",
+                    "description": "Instant for the open/closed status: ISO 8601 with offset (default: now)"
+                  },
+                  "list_year": {
+                    "type": "integer",
+                    "minimum": 2000,
+                    "maximum": 2050,
+                    "description": "Also list that year's holidays and early closes"
+                  }
+                }
+              },
+              "example": {
+                "exchange": "NYSE",
+                "date": "2026-11-27",
+                "at": "2026-11-27T17:00:00Z"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "exchange",
+                    "name",
+                    "timezone",
+                    "date",
+                    "weekday",
+                    "is_trading_day",
+                    "reason",
+                    "holiday",
+                    "early_close",
+                    "session",
+                    "previous_trading_day",
+                    "next_trading_day",
+                    "settlement",
+                    "status",
+                    "calendar",
+                    "note"
+                  ],
+                  "properties": {
+                    "exchange": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "date": {
+                      "type": "string"
+                    },
+                    "weekday": {
+                      "type": "string"
+                    },
+                    "is_trading_day": {
+                      "type": "boolean"
+                    },
+                    "reason": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "weekend",
+                        "holiday",
+                        null
+                      ]
+                    },
+                    "holiday": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "early_close": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Reason for an early close, if any"
+                    },
+                    "session": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "required": [
+                        "open",
+                        "close",
+                        "open_utc",
+                        "close_utc",
+                        "break"
+                      ],
+                      "properties": {
+                        "open": {
+                          "type": "string"
+                        },
+                        "close": {
+                          "type": "string"
+                        },
+                        "open_utc": {
+                          "type": "string"
+                        },
+                        "close_utc": {
+                          "type": "string"
+                        },
+                        "break": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "required": [
+                            "start",
+                            "end"
+                          ],
+                          "properties": {
+                            "start": {
+                              "type": "string"
+                            },
+                            "end": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "previous_trading_day": {
+                      "type": "string"
+                    },
+                    "next_trading_day": {
+                      "type": "string"
+                    },
+                    "settlement": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "required": [
+                        "cycle",
+                        "settlement_date",
+                        "note"
+                      ],
+                      "properties": {
+                        "cycle": {
+                          "type": "string"
+                        },
+                        "settlement_date": {
+                          "type": "string"
+                        },
+                        "note": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "status": {
+                      "type": "object",
+                      "required": [
+                        "at",
+                        "local",
+                        "is_open",
+                        "phase",
+                        "next_open",
+                        "next_close"
+                      ],
+                      "properties": {
+                        "at": {
+                          "type": "string"
+                        },
+                        "local": {
+                          "type": "string"
+                        },
+                        "is_open": {
+                          "type": "boolean"
+                        },
+                        "phase": {
+                          "type": "string",
+                          "enum": [
+                            "open",
+                            "pre_open",
+                            "break",
+                            "after_close",
+                            "closed_today"
+                          ]
+                        },
+                        "next_open": {
+                          "type": "string"
+                        },
+                        "next_close": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      }
+                    },
+                    "calendar": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "date",
+                          "name",
+                          "type"
+                        ],
+                        "properties": {
+                          "date": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "closed",
+                              "early_close"
+                            ]
+                          },
+                          "close": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "note": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "Payment Required"
+          }
+        }
+      }
+    },
+    "/v1/now": {
+      "get": {
+        "operationId": "currentTime",
+        "summary": "Free: current date and time in up to 10 time zones",
+        "tags": [
+          "Time zones"
+        ],
+        "parameters": [
+          {
+            "name": "timezones",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated IANA zones, e.g. Asia/Manila,America/New_York (default UTC)"
+          },
+          {
+            "name": "timezone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "A single IANA zone"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current time",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "utc",
+                    "unix_seconds",
+                    "unix_ms",
+                    "times"
+                  ],
+                  "properties": {
+                    "utc": {
+                      "type": "string"
+                    },
+                    "unix_seconds": {
+                      "type": "integer"
+                    },
+                    "unix_ms": {
+                      "type": "integer"
+                    },
+                    "times": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ZonedView"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
           }
         }
       }

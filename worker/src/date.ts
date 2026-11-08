@@ -240,10 +240,10 @@ export function zonedView(instant: Date, tz: string) {
  * are never less than ~4 weeks apart, so we verify the offset at both ends of 7-day segments (2 Intl calls/week)
  * and binary-search the exact transition minute when the ends differ.
  */
-export function offsetCursor(tz: string) {
+export function offsetCursor(tz: string, rawOffset?: (ms: number) => number) {
   const WEEK = 7 * DAY_MS;
   const segs: { a: number; b: number; off: number }[] = [];
-  const raw = (ms: number) => zonedParts(new Date(ms), tz).offsetMin;
+  const raw = rawOffset ?? ((ms: number) => zonedParts(new Date(ms), tz).offsetMin);
   return function offsetAt(ms: number): number {
     for (let i = segs.length - 1; i >= 0; i--) if (ms >= segs[i].a && ms <= segs[i].b) return segs[i].off;
     const a = ms, b = ms + WEEK;

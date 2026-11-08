@@ -30,7 +30,7 @@ describe("MCP (payments off)", () => {
     expect(init.result.serverInfo.name).toBe("date-math");
     const list = await rpc("tools/list", {});
     expect(list.result.tools.map((t: any) => t.name)).toEqual([
-      "date_diff", "date_add", "timezone_convert", "date_info", "public_holidays", "working_hours_overlap", "cron_schedule", "parse_date_text", "city_time", "recurring_dates", "business_hours_deadline", "business_day", "pay_dates", "stay_calculator", "timestamp_normalize", "dst_check",
+      "date_diff", "date_add", "timezone_convert", "date_info", "public_holidays", "working_hours_overlap", "cron_schedule", "parse_date_text", "city_time", "recurring_dates", "business_hours_deadline", "business_day", "pay_dates", "stay_calculator", "timestamp_normalize", "dst_check", "sla_countdown", "find_free_slots", "subscription_dates", "market_calendar", "current_time",
     ]);
     for (const t of list.result.tools) {
       expect(t.inputSchema.type).toBe("object");
@@ -188,6 +188,32 @@ describe("MCP free tier", () => {
     expect(list.result.tools[0].description).toContain("First 25 calls per day are free, then $0.001 per call");
   });
 
+  it("serves the free current_time tool without payment or quota, on both MCP paths", async () => {
+    const ns = fakeQuotaNs();
+    const env = { ...PAID_ENV, FREE_QUOTA: ns, FREE_CALLS_PER_DAY: "1" };
+    const now = (meta?: Record<string, unknown>) =>
+      rpc("tools/call", { name: "current_time", arguments: { timezone: "Asia/Manila" }, ...(meta ? { _meta: meta } : {}) }, env, { "CF-Connecting-IP": "203.0.113.7" });
+    for (let i = 0; i < 3; i++) {
+      const r = await now();
+      expect(r.result.isError).toBeUndefined();
+      expect(r.result.structuredContent.times[0].timezone).toBe("Asia/Manila");
+      expect(r.result._meta).toBeUndefined();
+    }
+    expect(ns.names()).toEqual([]); // no free calls spent
+    expect((await now({ "x402/payment": { x402Version: 2, payload: {} } })).result.isError).toBeUndefined(); // payment ignored
+    // The full SDK path (no fast path) behaves the same.
+    const req = new Request("https://date-math.example/mcp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream", "MCP-Protocol-Version": "2025-06-18", "CF-Connecting-IP": "203.0.113.7" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 99, method: "tools/call", params: { name: "current_time", arguments: {} } }),
+    });
+    const sdk = (await (await handleMcp(req, env as any, { sdkOnly: true })).json()) as any;
+    expect(sdk.result.structuredContent.times[0].timezone).toBe("UTC");
+    // Paid tools still respect the quota: the one free call is still available, then payment is required.
+    expect((await call(env)).result.isError).toBeUndefined();
+    expect((await call(env)).result.isError).toBe(true);
+  });
+
   it("leaves plain HTTP routes paid (x402 discovery expects 402)", async () => {
     const res = await worker.fetch(
       new Request("https://date-math.example/v1/info", { method: "POST", body: '{"date":"2026-11-07"}', headers: { "Content-Type": "application/json", "CF-Connecting-IP": "203.0.113.7" } }),
@@ -195,7 +221,7 @@ describe("MCP free tier", () => {
       ctx,
     );
     expect(res.status).toBe(402);
-  });
+  }, 20_000); // first paid HTTP call in a test process builds the x402 app; slow on a loaded Windows runner
 });
 
 describe("quota helpers", () => {

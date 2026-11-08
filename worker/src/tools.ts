@@ -4,6 +4,7 @@ import { cron, holidays, overlap, parse } from "./more";
 import { businessHours, cityTime, recurrence } from "./more2";
 import { businessDay, payDates } from "./biz";
 import { dst, stay, timestamp } from "./more3";
+import { currentTime, freeSlots, marketCalendar, slaCountdown, subscriptionDates } from "./more4";
 
 export interface Tool {
   name: string; // MCP tool name
@@ -157,6 +158,93 @@ TOOLS.push(
     run: dst,
     example: { timezone: "America/New_York", datetime: "2026-03-08T02:30" },
   },
+  {
+    name: "sla_countdown",
+    path: "/v1/sla",
+    title: "SLA countdown (business hours)",
+    description:
+      "Live SLA clock for a support ticket: business minutes elapsed and remaining, breached or not, and the deadline. The clock pauses outside working hours, on weekends and holidays, and during manual pauses (e.g. waiting on customer). Custom hours, workdays, country holidays, DST-aware. Use for support-agent SLA tracking and escalation.",
+    run: slaCountdown,
+    example: { start: "2026-11-06T16:00", now: "2026-11-09T10:30", sla_hours: 4, timezone: "Asia/Manila", country: "PH", pauses: [{ start: "2026-11-09T01:00:00Z", end: "2026-11-09T01:30:00Z" }] },
+  },
+  {
+    name: "find_free_slots",
+    path: "/v1/free_slots",
+    title: "Find free meeting slots",
+    description:
+      "Find meeting times when everyone is free: intersects each participant's working hours (own time zone, workdays, country holidays) minus their busy blocks, then lists slots of the requested length. Up to 10 people, 14 days, optional buffer between meetings. Use for scheduling across calendars and time zones.",
+    run: freeSlots,
+    example: {
+      participants: [
+        { timezone: "Asia/Manila", busy: [{ start: "2026-11-10T01:00:00Z", end: "2026-11-10T02:00:00Z" }] },
+        { timezone: "Europe/London", work_start: "08:00", work_end: "16:00" },
+      ],
+      from: "2026-11-10",
+      days: 2,
+      duration_minutes: 30,
+      max_slots: 3,
+    },
+  },
+  {
+    name: "subscription_dates",
+    path: "/v1/subscription",
+    title: "Subscription renewal and proration",
+    description:
+      "Subscription and contract date math: current billing period, next renewal, upcoming renewals, cancel-by date for a notice period, free-trial start, and day-based proration of a price. Month-end anchors stay at month end (Jan 31, Feb 28, Mar 31). Use for SaaS billing, renewals, cancellation deadlines and refunds.",
+    run: subscriptionDates,
+    example: { start: "2026-01-31", interval: "month", as_of: "2026-03-10", notice_days: 7, amount: 30 },
+  },
+  {
+    name: "market_calendar",
+    path: "/v1/market",
+    title: "Stock market hours and holidays",
+    description:
+      "Stock exchange calendar for NYSE/Nasdaq, London (LSE) and Tokyo (JPX): is the market open now, today's session (early closes, lunch break), next open and close, holidays, previous/next trading day, and the trade settlement date (T+1/T+2). Use for trading agents, order timing and settlement.",
+    run: marketCalendar,
+    example: { exchange: "NYSE", date: "2026-11-27", at: "2026-11-27T17:00:00Z" },
+  },
 );
+
+/** Free tools: no payment and no free-tier quota, over MCP (listed with the paid tools) and HTTP GET. */
+export interface FreeTool {
+  name: string;
+  path: string; // HTTP route (GET)
+  title: string;
+  description: string;
+  run: (body: Record<string, unknown>) => unknown;
+  example: Record<string, unknown>;
+  inputSchema: Record<string, unknown>;
+  outputSchema: Record<string, unknown>;
+}
+
+const zonedViewSchema = {
+  type: "object",
+  required: ["timezone", "datetime", "date", "time", "weekday", "utc_offset"],
+  properties: { timezone: { type: "string" }, datetime: { type: "string" }, date: { type: "string" }, time: { type: "string" }, weekday: { type: "string" }, utc_offset: { type: "string" } },
+};
+
+export const FREE_TOOLS: FreeTool[] = [
+  {
+    name: "current_time",
+    path: "/v1/now",
+    title: "Current date and time (free)",
+    description:
+      "Free: the current date, time, weekday and UTC offset in up to 10 time zones, plus UTC and Unix time. Call this first whenever you need today's date; models do not know it. Does not use the daily free calls.",
+    run: currentTime,
+    example: { timezones: ["Asia/Manila", "America/New_York"] },
+    inputSchema: {
+      type: "object",
+      properties: {
+        timezone: { type: "string", description: "IANA time zone, e.g. Asia/Manila" },
+        timezones: { type: "array", items: { type: "string" }, maxItems: 10, description: "Up to 10 IANA time zones (default UTC)" },
+      },
+    },
+    outputSchema: {
+      type: "object",
+      required: ["utc", "unix_seconds", "unix_ms", "times"],
+      properties: { utc: { type: "string" }, unix_seconds: { type: "integer" }, unix_ms: { type: "integer" }, times: { type: "array", items: zonedViewSchema } },
+    },
+  },
+];
 
 export const PAID_PATHS = TOOLS.map((t) => t.path);

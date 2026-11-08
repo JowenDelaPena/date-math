@@ -18,7 +18,7 @@ import { ORIGIN, VERSION } from "./app";
 import { InputError } from "./errors";
 import { getPayments, inputSchemaFor, outputExampleFor, outputSchemaFor, type Env, type Payments } from "./payments";
 import { freeLimit, freeTaker, type QuotaNamespace } from "./quota";
-import { TOOLS, type Tool } from "./tools";
+import { FREE_TOOLS, TOOLS, type Tool } from "./tools";
 
 type ToolResult = { content: { type: "text"; text: string }[]; structuredContent?: Record<string, unknown>; isError?: boolean; _meta?: Record<string, unknown> };
 
@@ -31,7 +31,7 @@ export interface McpEnv extends Env {
 }
 type Handler = (args: Record<string, unknown>, extra: Record<string, unknown>) => Promise<ToolResult>;
 
-function runTool(t: Tool, args: Record<string, unknown>): ToolResult {
+function runTool(t: Pick<Tool, "run" | "example">, args: Record<string, unknown>): ToolResult {
   try {
     const out = t.run(args ?? {}) as Record<string, unknown>;
     return { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out };
@@ -82,6 +82,16 @@ function toolList(price: string | null, free: number) {
       outputSchema: { type: "object" as const, ...outputSchemaFor(t.path) },
       annotations: { readOnlyHint: true, openWorldHint: false, idempotentHint: true },
     }));
+    for (const f of FREE_TOOLS) {
+      tools.push({
+        name: f.name,
+        title: f.title,
+        description: f.description,
+        inputSchema: f.inputSchema as any,
+        outputSchema: f.outputSchema as any,
+        annotations: { readOnlyHint: true, openWorldHint: false, idempotentHint: false },
+      });
+    }
     listCache.set(key, tools);
   }
   return tools;
@@ -105,9 +115,11 @@ function buildServer(p: Payments | null, free: number, takeFree: (() => Promise<
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: toolList(p?.cfg.PRICE ?? null, free) as any }));
 
   server.setRequestHandler(CallToolRequestSchema, async (req, extra) => {
+    const args = (req.params.arguments ?? {}) as Record<string, unknown>;
+    const f = FREE_TOOLS.find((x) => x.name === req.params.name);
+    if (f) return runTool(f, args); // free tools: never paid, never counted against the free tier
     const t = TOOLS.find((x) => x.name === req.params.name);
     if (!t) return { content: [{ type: "text", text: `unknown tool: ${req.params.name}` }], isError: true };
-    const args = (req.params.arguments ?? {}) as Record<string, unknown>;
     if (!p) return runTool(t, args);
     // Free tier: only when the client sent no payment (a paying client never burns free calls).
     if (takeFree && !req.params._meta?.["x402/payment"]) {
@@ -192,6 +204,8 @@ async function fastPath(request: Request, p: Payments | null, free: number, take
     case "tools/call": {
       const args = params.arguments === undefined ? {} : params.arguments;
       if (typeof params.name !== "string" || !isObj(args)) return null;
+      const f = FREE_TOOLS.find((x) => x.name === params.name);
+      if (f) return reply(runTool(f, args));
       const t = TOOLS.find((x) => x.name === params.name);
       if (!t) return reply({ content: [{ type: "text", text: `unknown tool: ${params.name}` }], isError: true });
       if (!p) return reply(runTool(t, args));

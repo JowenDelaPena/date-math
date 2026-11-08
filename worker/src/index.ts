@@ -14,7 +14,7 @@ import { handleMcp, type McpEnv } from "./mcp";
 import { mcpOutcome, mcpRequestInfo, outcome, safeDecode } from "./outcome";
 import { paidApp } from "./payments";
 import { FreeQuota } from "./quota";
-import { PAID_PATHS } from "./tools";
+import { FREE_TOOLS, PAID_PATHS } from "./tools";
 
 // The one named export besides default: Durable Object classes must be exported from the entry module.
 export { FreeQuota };
@@ -24,6 +24,7 @@ interface WorkerEnv extends McpEnv {
 }
 
 const PAID = new Set(PAID_PATHS);
+const FREE_NAMES = new Set(FREE_TOOLS.map((f) => f.name));
 /** Outcomes that may mean lost earnings; logged again at error level so Observability's error view shows them. */
 const ALERT = new Set(["rpc_error", "payment_failed", "unverified", "unparsable", "error"]);
 
@@ -48,7 +49,8 @@ export default {
       const { method, tool, attempted } = request.method === "POST" ? await mcpRequestInfo(request) : {};
       const res = await handleMcp(request, env);
       if (method === "tools/call") {
-        const r = mcpOutcome(await res.clone().text(), Boolean(attempted));
+        // Free tools ignore any attached payment, so never report them as failed payments.
+        const r = mcpOutcome(await res.clone().text(), Boolean(attempted) && !FREE_NAMES.has(tool ?? ""));
         log({ via: "mcp", path: tool ?? "?", status: res.status, ...r, ms: Date.now() - started });
         if (ALERT.has(r.outcome)) console.error(JSON.stringify({ evt: "payment_alert", via: "mcp", path: tool, outcome: r.outcome }));
       } else if (method === "tools/list") log({ via: "mcp", path: "tools/list", status: res.status, outcome: "free", ms: Date.now() - started });

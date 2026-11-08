@@ -31,6 +31,11 @@
 | `/v1/stay` | `stay_calculator` | Schengen-style 90/180 stay limits: days used and left, overstay check, the longest stay from a planned entry date, the next date a full stay is possible |
 | `/v1/timestamp` | `timestamp_normalize` | Converts up to 100 mixed timestamps (Unix s/ms/µs/ns, Excel serials, FILETIME, ISO 8601, RFC 2822, slash dates) to UTC and flags ambiguous ones like 03/04/2026 |
 | `/v1/dst` | `dst_check` | A zone's daylight-saving clock changes for a year, and whether a local time is valid, skipped (spring-forward gap) or repeated (fall-back) |
+| `/v1/sla` | `sla_countdown` | Live SLA clock for support tickets: business minutes elapsed and remaining, breached or not, deadline. Pauses outside working hours, on holidays and during manual pauses |
+| `/v1/free_slots` | `find_free_slots` | Meeting slots when everyone is free: each person's working hours in their own zone (and holidays) minus their busy blocks |
+| `/v1/subscription` | `subscription_dates` | Billing period, next renewal, cancel-by date for a notice period, trial start and day-based proration; month-end anchors stay at month end |
+| `/v1/market` | `market_calendar` | NYSE/Nasdaq, London and Tokyo: open now, session hours (early closes, lunch break), holidays, next open/close, settlement date (T+1/T+2) |
+| `GET /v1/now` | `current_time` | **Free:** the current date and time in up to 10 time zones. No payment, and it doesn't use the daily free calls |
 
 ## Use it in your app
 

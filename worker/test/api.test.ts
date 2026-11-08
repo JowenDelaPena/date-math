@@ -14,7 +14,7 @@ async function json(res: Response) {
 describe("probes", () => {
   it("identity", async () => {
     const res = await app.request("/v1/version");
-    expect(await json(res)).toEqual({ service: "date-math", version: "1.6.0" });
+    expect(await json(res)).toEqual({ service: "date-math", version: "1.7.0" });
     expect(res.headers.get("cache-control")).toContain("no-transform");
   });
   it("health", async () => expect(await json(await app.request("/v1/health"))).toEqual({ status: "ok" }));
