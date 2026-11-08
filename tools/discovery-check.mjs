@@ -3,7 +3,8 @@
 const API = "https://date-math.datemath.workers.dev";
 const NAME = "io.github.JowenDelaPena/date-math";
 const NPM = "date-math-mcp";
-const ROUTES = 13;
+// Paid routes, read from the live service so this never goes stale.
+const ROUTES = (await (await fetch(API + "/.well-known/x402")).json()).resources.length;
 
 const line = (ok, msg) => console.log(`  ${ok ? "ok  " : "WARN"}  ${msg}`);
 const json = async (url) => (await fetch(url, { headers: { Accept: "application/json" } })).json();

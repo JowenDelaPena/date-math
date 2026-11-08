@@ -3,7 +3,7 @@
 // forwards the Bazaar extension (the official @x402/fetch client does).
 //
 // Uses a THROWAWAY buyer wallet stored in worker/.buyer-key (gitignored). Fund it with ~$0.05 USDC
-// on Base. The facilitator pays gas, so no ETH is needed. Each call costs $0.001 (4 calls = $0.004),
+// on Base. The facilitator pays gas, so no ETH is needed. Each call costs $0.001,
 // and the money goes to your PAY_TO wallet, so you pay yourself.
 //
 // Usage (from worker/):  node scripts/first-payment.mjs
@@ -45,29 +45,15 @@ if (bal < 0.005) {
 }
 
 const pay = wrapFetchWithPaymentFromConfig(fetch, { schemes: [{ network: "eip155:8453", client: new ExactEvmScheme(account) }] });
-// `node scripts/first-payment.mjs`          pays every tool once ($0.013) + one MCP call
-// `node scripts/first-payment.mjs new`      pays only the tools marked new below
-// `node scripts/first-payment.mjs city cron` pays only the named tools (path without /v1/)
+// `node scripts/first-payment.mjs`                     pays every paid tool once ($0.001 each) + one MCP call
+// `node scripts/first-payment.mjs stay sla market`     pays only the named tools (path without /v1/)
+// Tools and example bodies come from the live service's index (GET /), so new tools are included automatically.
 // The MCP call uses the free daily tier when it has calls left, so it usually settles nothing.
 const args = process.argv.slice(2);
-const onlyNew = args[0] === "new";
-const named = !onlyNew && args.length ? new Set(args.map((a) => "/v1/" + a.replace(/^\/?(v1\/)?/, ""))) : null;
-const all = [
-  ["/v1/info", { date: "2026-11-07" }, false],
-  ["/v1/diff", { from: "2026-01-31", to: "2026-03-15", country: "US" }, false],
-  ["/v1/add", { date: "2026-12-22", business_days: 5, country: "PH" }, false],
-  ["/v1/convert", { datetime: "2026-11-07T14:30:00", from_timezone: "Asia/Manila", to_timezone: "America/New_York" }, false],
-  ["/v1/holidays", { country: "PH", year: 2026 }, true],
-  ["/v1/overlap", { timezones: ["Asia/Manila", "Europe/London"], date: "2026-11-10", work_start: "09:00", work_end: "18:00" }, true],
-  ["/v1/cron", { expression: "0 9 * * 1-5", timezone: "Asia/Manila", count: 3 }, true],
-  ["/v1/parse", { text: "next friday at 3pm", timezone: "Asia/Manila" }, true],
-  ["/v1/city", { cities: ["Cebu", "London", "New York"] }, true],
-  ["/v1/recurrence", { rrule: "FREQ=MONTHLY;BYDAY=2TU", start: "2026-01-01T10:00", timezone: "Asia/Manila", count: 3 }, true],
-  ["/v1/business_hours", { start: "2026-11-06T16:00", hours: 2, timezone: "Asia/Manila", work_start: "09:00", work_end: "17:00", country: "PH" }, true],
-  ["/v1/business_day", { date: "2026-12-25", country: "PH" }, true],
-  ["/v1/pay_dates", { schedule: "semi_monthly", from: "2026-12-01", count: 4, country: "PH" }, true],
-];
-const calls = all.filter(([path, , isNew]) => (named ? named.has(path) : !onlyNew || isNew));
+const named = args.length ? new Set(args.map((a) => "/v1/" + a.replace(/^\/?(v1\/)?/, ""))) : null;
+const index = await (await fetch(API + "/")).json();
+const all = Object.entries(index.endpoints).map(([route, e]) => [route.replace(/^POST /, ""), e.example]);
+const calls = all.filter(([path]) => !named || named.has(path));
 if (named && calls.length !== named.size) console.log(`Unknown tool name(s). Known: ${all.map(([p]) => p.slice(4)).join(", ")}`);
 
 for (const [path, body] of calls) {
