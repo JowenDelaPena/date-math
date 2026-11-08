@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "date-math": {
+      "type": "http",
+      "url": "https://date-math.datemath.workers.dev/mcp"
+    }
+  }
+}
