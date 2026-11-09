@@ -229,7 +229,7 @@ export const FREE_TOOLS: FreeTool[] = [
     path: "/v1/now",
     title: "Current date and time (free)",
     description:
-      "Free: the current date, time, weekday and UTC offset in up to 10 time zones, plus UTC and Unix time. Call this first whenever you need today's date; models do not know it. Does not use the daily free calls.",
+      "Free: the current date, time, weekday and UTC offset in up to 10 time zones, plus UTC and Unix time. Use when today's date or the current time is needed. Does not use the daily free calls.",
     run: currentTime,
     example: { timezones: ["Asia/Manila", "America/New_York"] },
     inputSchema: {
