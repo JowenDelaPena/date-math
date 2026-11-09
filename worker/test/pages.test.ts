@@ -40,3 +40,12 @@ describe("tool pages", () => {
     }
   });
 });
+
+describe("IndexNow", () => {
+  it("serves the key file with the key as its only content", async () => {
+    const { INDEXNOW_KEY } = await import("../src/app");
+    const res = await app.request(`/${INDEXNOW_KEY}.txt`);
+    expect(res.status).toBe(200);
+    expect((await res.text()).trim()).toBe(INDEXNOW_KEY);
+  });
+});

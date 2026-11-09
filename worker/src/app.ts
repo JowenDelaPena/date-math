@@ -141,6 +141,10 @@ ${FREE_TOOLS.map((f) => `- [GET ${f.path}](${ORIGIN}${f.path}) (MCP: ${f.name}):
 `;
 app.get("/llms.txt", (c) => c.text(LLMS_TXT));
 
+// IndexNow (Bing, Yandex, Seznam...): this public key proves we own the host; scripts/indexnow.mjs pings after deploys.
+export const INDEXNOW_KEY = "c85e783d609e7cc2e582e722ed10b4bd";
+app.get(`/${INDEXNOW_KEY}.txt`, (c) => c.text(INDEXNOW_KEY));
+
 // Search engines (Google, Bing; Bing also feeds ChatGPT search and Copilot).
 app.get("/robots.txt", (c) => c.text(`User-agent: *\nAllow: /\n\nSitemap: ${ORIGIN}/sitemap.xml\n`));
 app.get("/sitemap.xml", (c) =>

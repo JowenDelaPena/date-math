@@ -16,28 +16,30 @@
 
 ## Tools
 
+Each tool name links to its own page with a full description, an example and a live try-it box.
+
 | HTTP (`POST`, JSON body) | MCP tool | What it does |
 |---|---|---|
-| `/v1/diff` | `date_diff` | Days, weeks, months and business days between two dates. Pass `country` to skip its public holidays, `workdays` for non Mon–Fri weeks. |
-| `/v1/add` | `date_add` | The date N days, weeks, months or business days before or after a date |
-| `/v1/convert` | `timezone_convert` | Converts a time between IANA time zones (DST-aware) |
-| `/v1/info` | `date_info` | Weekday, ISO week, quarter, day of year, leap year |
-| `/v1/holidays` | `public_holidays` | Public holidays for 207 countries, 2000–2050 |
-| `/v1/overlap` | `working_hours_overlap` | When working hours overlap across time zones (meeting slots) |
-| `/v1/cron` | `cron_schedule` | Explains a cron expression and lists its next runs in any zone |
-| `/v1/parse` | `parse_date_text` | "next Friday at 3pm" → an exact ISO datetime |
-| `/v1/city` | `city_time` | City name → time zone and local time (7,000+ cities) |
-| `/v1/recurrence` | `recurring_dates` | Expands an iCal RRULE ("every 2nd Tuesday") into dates |
-| `/v1/business_hours` | `business_hours_deadline` | SLA deadline N working hours from now, or working time elapsed |
-| `/v1/business_day` | `business_day` | Is a date a business day, and if not, why (weekend or which holiday); next/previous business day; the month's business days |
-| `/v1/pay_dates` | `pay_dates` | Payroll and billing dates (monthly, 15th and last, biweekly, weekly) moved off weekends and holidays |
-| `/v1/stay` | `stay_calculator` | Schengen-style 90/180 stay limits: days used and left, overstay check, the longest stay from a planned entry date, the next date a full stay is possible |
-| `/v1/timestamp` | `timestamp_normalize` | Converts up to 100 mixed timestamps (Unix s/ms/µs/ns, Excel serials, FILETIME, ISO 8601, RFC 2822, slash dates) to UTC and flags ambiguous ones like 03/04/2026 |
-| `/v1/dst` | `dst_check` | A zone's daylight-saving clock changes for a year, and whether a local time is valid, skipped (spring-forward gap) or repeated (fall-back) |
-| `/v1/sla` | `sla_countdown` | Live SLA clock for support tickets: business minutes elapsed and remaining, breached or not, deadline. Pauses outside working hours, on holidays and during manual pauses |
-| `/v1/free_slots` | `find_free_slots` | Meeting slots when everyone is free: each person's working hours in their own zone (and holidays) minus their busy blocks |
-| `/v1/subscription` | `subscription_dates` | Billing period, next renewal, cancel-by date for a notice period, trial start and day-based proration; month-end anchors stay at month end |
-| `/v1/market` | `market_calendar` | NYSE/Nasdaq, London and Tokyo: open now, session hours (early closes, lunch break), holidays, next open/close, settlement date (T+1/T+2) |
+| `/v1/diff` | [`date_diff`](https://date-math.datemath.workers.dev/tools/date-diff) | Days, weeks, months and business days between two dates. Pass `country` to skip its public holidays, `workdays` for non Mon–Fri weeks. |
+| `/v1/add` | [`date_add`](https://date-math.datemath.workers.dev/tools/date-add) | The date N days, weeks, months or business days before or after a date |
+| `/v1/convert` | [`timezone_convert`](https://date-math.datemath.workers.dev/tools/timezone-convert) | Converts a time between IANA time zones (DST-aware) |
+| `/v1/info` | [`date_info`](https://date-math.datemath.workers.dev/tools/date-info) | Weekday, ISO week, quarter, day of year, leap year |
+| `/v1/holidays` | [`public_holidays`](https://date-math.datemath.workers.dev/tools/public-holidays) | Public holidays for 207 countries, 2000–2050 |
+| `/v1/overlap` | [`working_hours_overlap`](https://date-math.datemath.workers.dev/tools/working-hours-overlap) | When working hours overlap across time zones (meeting slots) |
+| `/v1/cron` | [`cron_schedule`](https://date-math.datemath.workers.dev/tools/cron-schedule) | Explains a cron expression and lists its next runs in any zone |
+| `/v1/parse` | [`parse_date_text`](https://date-math.datemath.workers.dev/tools/parse-date-text) | "next Friday at 3pm" → an exact ISO datetime |
+| `/v1/city` | [`city_time`](https://date-math.datemath.workers.dev/tools/city-time) | City name → time zone and local time (7,000+ cities) |
+| `/v1/recurrence` | [`recurring_dates`](https://date-math.datemath.workers.dev/tools/recurring-dates) | Expands an iCal RRULE ("every 2nd Tuesday") into dates |
+| `/v1/business_hours` | [`business_hours_deadline`](https://date-math.datemath.workers.dev/tools/business-hours-deadline) | SLA deadline N working hours from now, or working time elapsed |
+| `/v1/business_day` | [`business_day`](https://date-math.datemath.workers.dev/tools/business-day) | Is a date a business day, and if not, why (weekend or which holiday); next/previous business day; the month's business days |
+| `/v1/pay_dates` | [`pay_dates`](https://date-math.datemath.workers.dev/tools/pay-dates) | Payroll and billing dates (monthly, 15th and last, biweekly, weekly) moved off weekends and holidays |
+| `/v1/stay` | [`stay_calculator`](https://date-math.datemath.workers.dev/tools/stay-calculator) | Schengen-style 90/180 stay limits: days used and left, overstay check, the longest stay from a planned entry date, the next date a full stay is possible |
+| `/v1/timestamp` | [`timestamp_normalize`](https://date-math.datemath.workers.dev/tools/timestamp-normalize) | Converts up to 100 mixed timestamps (Unix s/ms/µs/ns, Excel serials, FILETIME, ISO 8601, RFC 2822, slash dates) to UTC and flags ambiguous ones like 03/04/2026 |
+| `/v1/dst` | [`dst_check`](https://date-math.datemath.workers.dev/tools/dst-check) | A zone's daylight-saving clock changes for a year, and whether a local time is valid, skipped (spring-forward gap) or repeated (fall-back) |
+| `/v1/sla` | [`sla_countdown`](https://date-math.datemath.workers.dev/tools/sla-countdown) | Live SLA clock for support tickets: business minutes elapsed and remaining, breached or not, deadline. Pauses outside working hours, on holidays and during manual pauses |
+| `/v1/free_slots` | [`find_free_slots`](https://date-math.datemath.workers.dev/tools/find-free-slots) | Meeting slots when everyone is free: each person's working hours in their own zone (and holidays) minus their busy blocks |
+| `/v1/subscription` | [`subscription_dates`](https://date-math.datemath.workers.dev/tools/subscription-dates) | Billing period, next renewal, cancel-by date for a notice period, trial start and day-based proration; month-end anchors stay at month end |
+| `/v1/market` | [`market_calendar`](https://date-math.datemath.workers.dev/tools/market-calendar) | NYSE/Nasdaq, London and Tokyo: open now, session hours (early closes, lunch break), holidays, next open/close, settlement date (T+1/T+2) |
 | `GET /v1/now` | `current_time` | **Free:** the current date and time in up to 10 time zones. No payment, and it doesn't use the daily free calls |
 
 ## Use it in your app
