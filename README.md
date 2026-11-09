@@ -2,8 +2,10 @@
 
 [![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/jowendelapena/date-math)
 [![Date Math – Business Days, Holidays & Time Zones MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/JowenDelaPena/date-math/badges/score.svg)](https://glama.ai/mcp/servers/JowenDelaPena/date-math)
+[![Date Math MCP on mcprush](https://mcprush.com/badge/jowendelapena-date-math-mcp/score.svg)](https://mcprush.com/to/jowendelapena-date-math-mcp?ref=badge)
 
 [![Date Math – Business Days, Holidays & Time Zones MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/JowenDelaPena/date-math/badges/card.svg)](https://glama.ai/mcp/servers/JowenDelaPena/date-math)
+[![Date Math MCP server](https://mcprush.com/badge/jowendelapena-date-math-mcp/card.svg)](https://mcprush.com/to/jowendelapena-date-math-mcp?ref=badge)
 
 **Exact date and time math for AI agents, paid per call.** LLMs are unreliable at business days, DST, recurring schedules and holiday calendars. Date Math gives them deterministic answers over HTTP or MCP.
 
