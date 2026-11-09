@@ -76,7 +76,7 @@ export const siteHeader = (version: string, base: string) => `<header>
 
 export const FOOTER = `<footer>
   <div class="wrap">
-    <span>Date Math &middot; MIT licensed</span>
+    <span>Date Math &middot; MIT licensed &middot; <a href="/privacy">Privacy</a></span>
     <nav><a href="https://github.com/JowenDelaPena/date-math">GitHub</a><a href="https://registry.modelcontextprotocol.io/v0/servers?search=io.github.JowenDelaPena/date-math">MCP Registry</a><a href="https://glama.ai/mcp/servers/JowenDelaPena/date-math">Glama</a><a href="https://www.npmjs.com/package/date-math-mcp">npm</a><a href="/openapi.json">OpenAPI</a><a href="/.well-known/x402">x402 discovery</a><a href="https://www.x402scan.com/server/e4a16a53-40a4-4ca8-aae9-05b0b86b1e52">x402scan</a></nav>
   </div>
 </footer>`;

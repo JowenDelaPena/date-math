@@ -49,3 +49,17 @@ describe("IndexNow", () => {
     expect((await res.text()).trim()).toBe(INDEXNOW_KEY);
   });
 });
+
+describe("privacy policy", () => {
+  it("is a complete HTML page, linked from the footer and listed in the sitemap", async () => {
+    const res = await app.request("/privacy", { headers: { Accept: "*/*" } });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("text/html");
+    const html = await res.text();
+    for (const s of ["Privacy policy", "Retention", "Sharing", "github.com/JowenDelaPena/date-math/issues", "not written to logs"]) expect(html).toContain(s);
+    expect(html).not.toContain("${");
+    const home = await (await app.request("/", { headers: { Accept: "text/html" } })).text();
+    expect(home).toContain('<a href="/privacy">Privacy</a>');
+    expect(await (await app.request("/sitemap.xml")).text()).toContain("<loc>https://date-math.datemath.workers.dev/privacy</loc>");
+  });
+});

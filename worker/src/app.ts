@@ -5,6 +5,7 @@ import spec from "./openapi.json";
 import { ICON_PNG_BASE64 } from "./icon-png";
 import { ICON_DATA_URI, LANDING_CSP, landingHtml } from "./landing";
 import { TOOL_PAGE_PATHS, toolByName, toolPageHtml } from "./pages";
+import { privacyHtml } from "./privacy";
 import { FREE_TOOLS, TOOLS } from "./tools";
 
 // The free API (no payments). index.ts wraps it with x402 for direct paid access and adds /mcp.
@@ -56,6 +57,10 @@ app.get("/tools/:slug", (c, next) => {
   if (!t) return next();
   return c.body(toolPageHtml(ORIGIN, VERSION, t), 200, { "Content-Type": "text/html; charset=utf-8", "Content-Security-Policy": LANDING_CSP, "X-Content-Type-Options": "nosniff" });
 });
+
+app.get("/privacy", (c) =>
+  c.body(privacyHtml(ORIGIN, VERSION), 200, { "Content-Type": "text/html; charset=utf-8", "Content-Security-Policy": LANDING_CSP, "X-Content-Type-Options": "nosniff" }),
+);
 
 const iconSvg = decodeURIComponent(ICON_DATA_URI.slice("data:image/svg+xml,".length));
 const serveIcon = (c: Context) => c.body(iconSvg, 200, { "Content-Type": "image/svg+xml", "Cache-Control": "public, max-age=86400" });
@@ -150,7 +155,7 @@ app.get("/robots.txt", (c) => c.text(`User-agent: *\nAllow: /\n\nSitemap: ${ORIG
 app.get("/sitemap.xml", (c) =>
   c.body(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-      ["/", ...TOOL_PAGE_PATHS, "/llms.txt"].map((p) => `  <url><loc>${ORIGIN}${p}</loc></url>\n`).join("") +
+      ["/", ...TOOL_PAGE_PATHS, "/privacy", "/llms.txt"].map((p) => `  <url><loc>${ORIGIN}${p}</loc></url>\n`).join("") +
       `</urlset>\n`,
     200,
     { "Content-Type": "application/xml; charset=utf-8" },
