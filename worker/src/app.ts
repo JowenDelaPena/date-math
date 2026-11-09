@@ -2,6 +2,7 @@ import { Hono, type Context } from "hono";
 import { SUPPORTED_PROTOCOL_VERSIONS } from "@modelcontextprotocol/sdk/types.js";
 import { InputError } from "./errors";
 import spec from "./openapi.json";
+import { ICON_PNG_BASE64 } from "./icon-png";
 import { ICON_DATA_URI, LANDING_CSP, landingHtml } from "./landing";
 import { FREE_TOOLS, TOOLS } from "./tools";
 
@@ -48,7 +49,12 @@ app.get("/", (c, next) => {
 const iconSvg = decodeURIComponent(ICON_DATA_URI.slice("data:image/svg+xml,".length));
 const serveIcon = (c: Context) => c.body(iconSvg, 200, { "Content-Type": "image/svg+xml", "Cache-Control": "public, max-age=86400" });
 app.get("/favicon.svg", serveIcon);
-app.get("/favicon.ico", serveIcon);
+// PNG for crawlers that rehost icons (Coinbase Bazaar / Agentic.Market skip SVG favicons).
+const iconPng = Uint8Array.from(atob(ICON_PNG_BASE64), (ch) => ch.charCodeAt(0));
+const servePng = (c: Context) => c.body(iconPng, 200, { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400" });
+app.get("/favicon.ico", servePng);
+app.get("/icon.png", servePng);
+app.get("/apple-touch-icon.png", servePng);
 
 // Machine-readable overview (card "docs" URL). A JSON object, per Pocket backend rules.
 app.get("/", (c) =>

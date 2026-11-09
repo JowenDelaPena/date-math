@@ -82,6 +82,9 @@ export function landingHtml(origin: string, version: string): string {
 <title>Date Math</title>
 <meta name="description" content="Exact date and time math for AI agents: business days, holidays, time zones, SLAs, cron and more. 20 deterministic tools over MCP and HTTP. 25 free calls a day.">
 <link rel="icon" type="image/svg+xml" href="${ICON_DATA_URI}">
+<link rel="icon" type="image/png" sizes="512x512" href="/icon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta property="og:image" content="${esc(origin)}/icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
