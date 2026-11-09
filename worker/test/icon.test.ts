@@ -37,3 +37,18 @@ describe("search engines", () => {
     expect(await res.text()).toContain("<loc>https://date-math.datemath.workers.dev/</loc>");
   });
 });
+
+describe("home page for search engines", () => {
+  for (const ua of ["Mozilla/5.0 (compatible; Google-Site-Verification/1.0)", "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)"]) {
+    it(`${ua.slice(25, 50)} gets the HTML page with the verification tag even with Accept */*`, async () => {
+      const res = await app.request("/", { headers: { Accept: "*/*", "User-Agent": ua } });
+      expect(res.headers.get("Content-Type")).toContain("text/html");
+      expect(await res.text()).toContain('name="google-site-verification"');
+    });
+  }
+
+  it("agents without text/html still get the JSON index", async () => {
+    const res = await app.request("/", { headers: { Accept: "*/*", "User-Agent": "node" } });
+    expect(res.headers.get("Content-Type")).toContain("application/json");
+  });
+});

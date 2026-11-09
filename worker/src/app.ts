@@ -40,8 +40,11 @@ export function parseBody(text: string): Record<string, unknown> {
 
 // Browsers get the landing page; agents, scripts and crawlers that don't ask for HTML get the JSON index.
 let landing: string | undefined;
+// Search-engine crawlers and site verifiers often send no "text/html" Accept header; they get the page too.
+const SEARCH_BOTS = /google-site-verification|googlebot|google-inspectiontool|bingbot|bingpreview|msnbot|duckduckbot|applebot|yandex/i;
 app.get("/", (c, next) => {
-  if (!(c.req.header("Accept") ?? "").includes("text/html")) return next();
+  const wantsHtml = (c.req.header("Accept") ?? "").includes("text/html") || SEARCH_BOTS.test(c.req.header("User-Agent") ?? "");
+  if (!wantsHtml) return next();
   landing ??= landingHtml(ORIGIN, VERSION);
   return c.body(landing, 200, { "Content-Type": "text/html; charset=utf-8", "Content-Security-Policy": LANDING_CSP, "X-Content-Type-Options": "nosniff" });
 });
