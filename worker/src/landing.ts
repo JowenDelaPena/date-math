@@ -6,12 +6,15 @@ import { FREE_TOOLS, TOOLS } from "./tools";
 /** Brand mark: a 3x3 grid of day cells, one in calendar red ("today"). Used as favicon and in the header. */
 const ICON_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect x="2" y="2" width="8" height="8" rx="1" fill="#141414"/><rect x="12" y="2" width="8" height="8" rx="1" fill="#141414"/><rect x="22" y="2" width="8" height="8" rx="1" fill="#141414"/><rect x="2" y="12" width="8" height="8" rx="1" fill="#141414"/><rect x="12" y="12" width="8" height="8" rx="1" fill="#141414"/><rect x="22" y="12" width="8" height="8" rx="1" fill="#141414"/><rect x="2" y="22" width="8" height="8" rx="1" fill="#141414"/><rect x="12" y="22" width="8" height="8" rx="1" fill="#141414"/><rect x="22" y="22" width="8" height="8" rx="1" fill="#c8372d"/></svg>';
+/** URL slug for a tool page: market_calendar -> market-calendar. */
+export const toolSlug = (name: string) => name.replace(/_/g, "-");
+
 export const ICON_DATA_URI = "data:image/svg+xml," + encodeURIComponent(ICON_SVG);
 
-const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+export const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 /** One-line summaries for the tool list (the MCP descriptions are written for agents and are longer). */
-const SHORT: Record<string, string> = {
+export const SHORT: Record<string, string> = {
   date_diff: "Days, weeks, months and business days between two dates",
   date_add: "Add days, months or business days, skipping a country's holidays",
   date_info: "Weekday, ISO week, quarter, day of year, leap year",
@@ -34,7 +37,7 @@ const SHORT: Record<string, string> = {
   market_calendar: "NYSE, London and Tokyo hours, holidays, settlement",
 };
 
-const GROUPS: [string, string[]][] = [
+export const GROUPS: [string, string[]][] = [
   ["Calendar", ["date_diff", "date_add", "date_info", "parse_date_text"]],
   ["Business days", ["business_day", "public_holidays", "pay_dates", "business_hours_deadline", "sla_countdown"]],
   ["Time zones", ["timezone_convert", "city_time", "working_hours_overlap", "find_free_slots", "dst_check"]],
@@ -51,37 +54,8 @@ const PRESETS: [string, string][] = [
   ["dst_check", "DST gap check"],
 ];
 
-export function landingHtml(origin: string, version: string): string {
-  const byName = new Map(TOOLS.map((t) => [t.name, t]));
-  const presets = PRESETS.map(([name, label]) => ({ name, label, args: byName.get(name)!.example }));
-  const listed = new Set(GROUPS.flatMap(([, n]) => n));
-  const extra = TOOLS.filter((t) => !listed.has(t.name)).map((t) => t.name);
-  const groups = extra.length ? [...GROUPS, ["More", extra] as [string, string[]]] : GROUPS;
-  const mcp = `${origin}/mcp`;
-  const toolRows = groups
-    .map(
-      ([title, names]) => `
-      <div class="group">
-        <h3>${esc(title)}</h3>
-        <ul>${names
-          .filter((n) => byName.has(n))
-          .map((n) => `<li><code>${esc(n)}</code><span>${esc(SHORT[n] ?? byName.get(n)!.title)}</span></li>`)
-          .join("")}</ul>
-      </div>`,
-    )
-    .join("");
-  const free = FREE_TOOLS.map((f) => `<code>${esc(f.name)}</code>`).join(", ");
-  const json = JSON.stringify({ mcpServers: { "date-math": { url: mcp } } }, null, 2);
-  const presetJson = JSON.stringify(presets).replace(/</g, "\\u003c");
-
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Date Math</title>
-<meta name="description" content="Exact date and time math for AI agents: business days, holidays, time zones, SLAs, cron and more. 20 deterministic tools over MCP and HTTP. 25 free calls a day.">
-<link rel="icon" type="image/svg+xml" href="${ICON_DATA_URI}">
+/** Shared <head> links: icons, search-engine verification, fonts. */
+export const headLinks = (origin: string) => `<link rel="icon" type="image/svg+xml" href="${ICON_DATA_URI}">
 <link rel="icon" type="image/png" sizes="512x512" href="/icon.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="google-site-verification" content="uBzxHhIeHn_ebQ4B9OiQ_a4XiYmNKiuYiuv7hYf7BFU">
@@ -90,8 +64,24 @@ export function landingHtml(origin: string, version: string): string {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
-<style>
-  :root {
+`;
+
+/** Shared site header. base is "#" on the home page and "/#" on tool pages. */
+export const siteHeader = (version: string, base: string) => `<header>
+  <div class="wrap">
+    <a class="mark" href="/"><img src="${ICON_DATA_URI}" width="18" height="18" alt="">Date Math <small>v${esc(version)}</small></a>
+    <nav class="top"><a href="${base}try">Try it</a><a href="${base}connect">Connect</a><a href="${base}tools">Tools</a><a href="${base}pricing">Pricing</a><a href="https://www.x402scan.com/server/e4a16a53-40a4-4ca8-aae9-05b0b86b1e52">x402</a><a href="https://github.com/JowenDelaPena/date-math">GitHub</a></nav>
+  </div>
+</header>`;
+
+export const FOOTER = `<footer>
+  <div class="wrap">
+    <span>Date Math &middot; MIT licensed</span>
+    <nav><a href="https://github.com/JowenDelaPena/date-math">GitHub</a><a href="https://registry.modelcontextprotocol.io/v0/servers?search=io.github.JowenDelaPena/date-math">MCP Registry</a><a href="https://glama.ai/mcp/servers/JowenDelaPena/date-math">Glama</a><a href="https://www.npmjs.com/package/date-math-mcp">npm</a><a href="/openapi.json">OpenAPI</a><a href="/.well-known/x402">x402 discovery</a><a href="https://www.x402scan.com/server/e4a16a53-40a4-4ca8-aae9-05b0b86b1e52">x402scan</a></nav>
+  </div>
+</footer>`;
+
+export const CSS = `  :root {
     --ink: #141414; --muted: #6a6a6a; --faint: #9a9a9a; --rule: #e7e5e1; --soft: #f7f6f3; --red: #c8372d;
     --serif: "Newsreader", Georgia, serif; --sans: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
   }
@@ -171,15 +161,94 @@ export function landingHtml(origin: string, version: string): string {
     .pricing > div + div { padding-left: 0; }
     .group li { grid-template-columns: 1fr; gap: 2px; }
   }
-</style>
+`;
+
+/** Try-it console script (runs a tool over MCP) plus copy buttons. presetJson must already be <-escaped. */
+export const tryScript = (presetJson: string) => `<script>
+(() => {
+  const presets = ${presetJson};
+  const tabs = document.querySelector(".tabs"), args = document.getElementById("args"), out = document.getElementById("out");
+  const meta = document.getElementById("meta"), name = document.getElementById("tool-name"), run = document.getElementById("run");
+  let current = presets[0];
+  const select = (p) => {
+    current = p;
+    name.textContent = p.name;
+    args.value = JSON.stringify(p.args, null, 2);
+    for (const b of tabs.children) b.setAttribute("aria-pressed", String(b.dataset.name === p.name));
+  };
+  for (const p of presets) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = p.label;
+    b.dataset.name = p.name;
+    b.addEventListener("click", () => select(p));
+    tabs.appendChild(b);
+  }
+  select(current);
+  run.addEventListener("click", async () => {
+    let parsed;
+    try { parsed = JSON.parse(args.value); } catch { out.textContent = "The arguments are not valid JSON."; return; }
+    run.disabled = true; out.textContent = "Running\\u2026"; meta.textContent = "";
+    const t0 = performance.now();
+    try {
+      const res = await fetch("/mcp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream", "MCP-Protocol-Version": "2025-06-18" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method: "tools/call", params: { name: current.name, arguments: parsed } }),
+      });
+      const msg = await res.json();
+      const r = msg.result || {};
+      const text = (r.content && r.content[0] && r.content[0].text) || JSON.stringify(msg.error || msg);
+      if (r.isError && text.includes("Payment required")) out.textContent = "Today's free calls are used up. Connect an x402 client to keep going at $0.001 per call, or come back tomorrow.";
+      else { try { out.textContent = JSON.stringify(JSON.parse(text), null, 2); } catch { out.textContent = text; } }
+      const left = r._meta && r._meta["date-math/free_calls_remaining"];
+      meta.textContent = Math.round(performance.now() - t0) + " ms" + (left !== undefined ? " \\u00b7 " + left + " free left today" : "");
+    } catch { out.textContent = "Network error. Try again."; }
+    run.disabled = false;
+  });
+  for (const btn of document.querySelectorAll(".copy")) {
+    btn.addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(btn.nextElementSibling.textContent); btn.textContent = "copied"; setTimeout(() => (btn.textContent = "copy"), 1200); } catch {}
+    });
+  }
+})();
+</script>`;
+
+export function landingHtml(origin: string, version: string): string {
+  const byName = new Map(TOOLS.map((t) => [t.name, t]));
+  const presets = PRESETS.map(([name, label]) => ({ name, label, args: byName.get(name)!.example }));
+  const listed = new Set(GROUPS.flatMap(([, n]) => n));
+  const extra = TOOLS.filter((t) => !listed.has(t.name)).map((t) => t.name);
+  const groups = extra.length ? [...GROUPS, ["More", extra] as [string, string[]]] : GROUPS;
+  const mcp = `${origin}/mcp`;
+  const toolRows = groups
+    .map(
+      ([title, names]) => `
+      <div class="group">
+        <h3>${esc(title)}</h3>
+        <ul>${names
+          .filter((n) => byName.has(n))
+          .map((n) => `<li><a href="/tools/${toolSlug(n)}"><code>${esc(n)}</code></a><span>${esc(SHORT[n] ?? byName.get(n)!.title)}</span></li>`)
+          .join("")}</ul>
+      </div>`,
+    )
+    .join("");
+  const free = FREE_TOOLS.map((f) => `<code>${esc(f.name)}</code>`).join(", ");
+  const json = JSON.stringify({ mcpServers: { "date-math": { url: mcp } } }, null, 2);
+  const presetJson = JSON.stringify(presets).replace(/</g, "\\u003c");
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Date Math</title>
+<meta name="description" content="Exact date and time math for AI agents: business days, holidays, time zones, SLAs, cron and more. 20 deterministic tools over MCP and HTTP. 25 free calls a day.">
+${headLinks(origin)}<style>
+${CSS}</style>
 </head>
 <body>
-<header>
-  <div class="wrap">
-    <a class="mark" href="/"><img src="${ICON_DATA_URI}" width="18" height="18" alt="">Date Math <small>v${esc(version)}</small></a>
-    <nav class="top"><a href="#try">Try it</a><a href="#connect">Connect</a><a href="#tools">Tools</a><a href="#pricing">Pricing</a><a href="https://www.x402scan.com/server/e4a16a53-40a4-4ca8-aae9-05b0b86b1e52">x402</a><a href="https://github.com/JowenDelaPena/date-math">GitHub</a></nav>
-  </div>
-</header>
+${siteHeader(version, "#")}
 
 <main>
   <div class="wrap hero">
@@ -268,62 +337,9 @@ export function landingHtml(origin: string, version: string): string {
   </section>
 </main>
 
-<footer>
-  <div class="wrap">
-    <span>Date Math &middot; MIT licensed</span>
-    <nav><a href="https://github.com/JowenDelaPena/date-math">GitHub</a><a href="https://registry.modelcontextprotocol.io/v0/servers?search=io.github.JowenDelaPena/date-math">MCP Registry</a><a href="https://glama.ai/mcp/servers/JowenDelaPena/date-math">Glama</a><a href="https://www.npmjs.com/package/date-math-mcp">npm</a><a href="/openapi.json">OpenAPI</a><a href="/.well-known/x402">x402 discovery</a><a href="https://www.x402scan.com/server/e4a16a53-40a4-4ca8-aae9-05b0b86b1e52">x402scan</a></nav>
-  </div>
-</footer>
+${FOOTER}
 
-<script>
-(() => {
-  const presets = ${presetJson};
-  const tabs = document.querySelector(".tabs"), args = document.getElementById("args"), out = document.getElementById("out");
-  const meta = document.getElementById("meta"), name = document.getElementById("tool-name"), run = document.getElementById("run");
-  let current = presets[0];
-  const select = (p) => {
-    current = p;
-    name.textContent = p.name;
-    args.value = JSON.stringify(p.args, null, 2);
-    for (const b of tabs.children) b.setAttribute("aria-pressed", String(b.dataset.name === p.name));
-  };
-  for (const p of presets) {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.textContent = p.label;
-    b.dataset.name = p.name;
-    b.addEventListener("click", () => select(p));
-    tabs.appendChild(b);
-  }
-  select(current);
-  run.addEventListener("click", async () => {
-    let parsed;
-    try { parsed = JSON.parse(args.value); } catch { out.textContent = "The arguments are not valid JSON."; return; }
-    run.disabled = true; out.textContent = "Running\\u2026"; meta.textContent = "";
-    const t0 = performance.now();
-    try {
-      const res = await fetch("/mcp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream", "MCP-Protocol-Version": "2025-06-18" },
-        body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method: "tools/call", params: { name: current.name, arguments: parsed } }),
-      });
-      const msg = await res.json();
-      const r = msg.result || {};
-      const text = (r.content && r.content[0] && r.content[0].text) || JSON.stringify(msg.error || msg);
-      if (r.isError && text.includes("Payment required")) out.textContent = "Today's free calls are used up. Connect an x402 client to keep going at $0.001 per call, or come back tomorrow.";
-      else { try { out.textContent = JSON.stringify(JSON.parse(text), null, 2); } catch { out.textContent = text; } }
-      const left = r._meta && r._meta["date-math/free_calls_remaining"];
-      meta.textContent = Math.round(performance.now() - t0) + " ms" + (left !== undefined ? " \\u00b7 " + left + " free left today" : "");
-    } catch { out.textContent = "Network error. Try again."; }
-    run.disabled = false;
-  });
-  for (const btn of document.querySelectorAll(".copy")) {
-    btn.addEventListener("click", async () => {
-      try { await navigator.clipboard.writeText(btn.nextElementSibling.textContent); btn.textContent = "copied"; setTimeout(() => (btn.textContent = "copy"), 1200); } catch {}
-    });
-  }
-})();
-</script>
+${tryScript(presetJson)}
 </body>
 </html>`;
 }
