@@ -8,6 +8,7 @@ import { api } from "./app";
 import { CDP_FACILITATOR_URL, cdpAuthHeaders } from "./cdp";
 import outputExamples from "./output-examples.json";
 import spec from "./openapi.json";
+import { SEARCH_TAGS } from "./tags";
 import { PAID_PATHS, TOOLS } from "./tools";
 
 export interface Env {
@@ -75,7 +76,7 @@ export function buildRoutes(cfg: PayConfig): RoutesConfig {
       description: `Date Math: ${t.description}`,
       mimeType: "application/json",
       serviceName: "Date Math",
-      tags: ["date", "time", "timezone", "calendar", "business-days", "holidays", "utility"],
+      tags: SEARCH_TAGS[t.name],
       ...(cfg.PUBLIC_URL ? { resource: cfg.PUBLIC_URL + t.path } : {}),
       unpaidResponseBody: () => ({
         contentType: "application/json",
