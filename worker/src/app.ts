@@ -130,6 +130,18 @@ ${FREE_TOOLS.map((f) => `- [GET ${f.path}](${ORIGIN}${f.path}) (MCP: ${f.name}):
 `;
 app.get("/llms.txt", (c) => c.text(LLMS_TXT));
 
+// Search engines (Google, Bing; Bing also feeds ChatGPT search and Copilot).
+app.get("/robots.txt", (c) => c.text(`User-agent: *\nAllow: /\n\nSitemap: ${ORIGIN}/sitemap.xml\n`));
+app.get("/sitemap.xml", (c) =>
+  c.body(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+      ["/", "/llms.txt"].map((p) => `  <url><loc>${ORIGIN}${p}</loc></url>\n`).join("") +
+      `</urlset>\n`,
+    200,
+    { "Content-Type": "application/xml; charset=utf-8" },
+  ),
+);
+
 for (const t of TOOLS) app.post(t.path, async (c) => c.json(t.run(parseBody(await c.req.text())) as object));
 // Free tools: GET with query parameters (never paid; not in PAID_PATHS, so x402 skips them).
 for (const f of FREE_TOOLS) app.get(f.path, (c) => c.json(f.run({ timezones: c.req.query("timezones") ?? c.req.query("timezone") }) as object));

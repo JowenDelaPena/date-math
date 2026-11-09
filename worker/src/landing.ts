@@ -84,6 +84,7 @@ export function landingHtml(origin: string, version: string): string {
 <link rel="icon" type="image/svg+xml" href="${ICON_DATA_URI}">
 <link rel="icon" type="image/png" sizes="512x512" href="/icon.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="google-site-verification" content="uBzxHhIeHn_ebQ4B9OiQ_a4XiYmNKiuYiuv7hYf7BFU">
 <meta property="og:image" content="${esc(origin)}/icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

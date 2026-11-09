@@ -20,5 +20,20 @@ describe("service icon", () => {
     const html = await (await app.request("/", { headers: { Accept: "text/html" } })).text();
     expect(html).toContain('<link rel="icon" type="image/png" sizes="512x512" href="/icon.png">');
     expect(html).toContain('<link rel="apple-touch-icon" href="/apple-touch-icon.png">');
+    expect(html).toContain('<meta name="google-site-verification" content="uBzxHhIeHn_ebQ4B9OiQ_a4XiYmNKiuYiuv7hYf7BFU">');
+  });
+});
+
+describe("search engines", () => {
+  it("robots.txt allows crawling and points to the sitemap", async () => {
+    const txt = await (await app.request("/robots.txt")).text();
+    expect(txt).toContain("Allow: /");
+    expect(txt).toContain("Sitemap: https://date-math.datemath.workers.dev/sitemap.xml");
+  });
+
+  it("sitemap.xml lists the landing page", async () => {
+    const res = await app.request("/sitemap.xml");
+    expect(res.headers.get("Content-Type")).toContain("application/xml");
+    expect(await res.text()).toContain("<loc>https://date-math.datemath.workers.dev/</loc>");
   });
 });
