@@ -9,6 +9,9 @@ import { CDP_FACILITATOR_URL, cdpAuthHeaders } from "./cdp";
 import outputExamples from "./output-examples.json";
 import spec from "./openapi.json";
 import { SEARCH_TAGS } from "./tags";
+
+/** Public PNG icon for Bazaar listings (served by app.ts at /icon.png). */
+export const ICON_URL = "https://date-math.datemath.workers.dev/icon.png";
 import { PAID_PATHS, TOOLS } from "./tools";
 
 export interface Env {
@@ -77,6 +80,7 @@ export function buildRoutes(cfg: PayConfig): RoutesConfig {
       mimeType: "application/json",
       serviceName: "Date Math",
       tags: SEARCH_TAGS[t.name],
+      iconUrl: ICON_URL, // Bazaar / Agentic.Market listing icon (read at settle time)
       ...(cfg.PUBLIC_URL ? { resource: cfg.PUBLIC_URL + t.path } : {}),
       unpaidResponseBody: () => ({
         contentType: "application/json",

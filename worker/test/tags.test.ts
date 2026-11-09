@@ -23,3 +23,10 @@ describe("Bazaar search tags", () => {
     }
   });
 });
+
+describe("Bazaar icon", () => {
+  it("every HTTP route advertises the PNG icon URL", () => {
+    const routes = buildRoutes({ PAY_TO: "0x0000000000000000000000000000000000000001", PRICE: "$0.001", X402_NETWORK: "eip155:8453", FACILITATOR_URL: "https://example.com" }) as unknown as Record<string, { iconUrl?: string }>;
+    for (const t of TOOLS) expect(routes[`POST ${t.path}`].iconUrl, t.name).toBe("https://date-math.datemath.workers.dev/icon.png");
+  });
+});

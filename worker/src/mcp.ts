@@ -16,7 +16,7 @@ import { createPaymentWrapper } from "@x402/mcp";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 import { ORIGIN, VERSION } from "./app";
 import { InputError } from "./errors";
-import { getPayments, inputSchemaFor, outputExampleFor, outputSchemaFor, type Env, type Payments } from "./payments";
+import { getPayments, ICON_URL, inputSchemaFor, outputExampleFor, outputSchemaFor, type Env, type Payments } from "./payments";
 import { freeLimit, freeTaker, type QuotaNamespace } from "./quota";
 import { SEARCH_TAGS } from "./tags";
 import { FREE_TOOLS, TOOLS, type Tool } from "./tools";
@@ -53,7 +53,7 @@ async function paidHandlers(p: Payments): Promise<Map<string, Handler>> {
   for (const t of TOOLS) {
     const wrap = createPaymentWrapper(p.server, {
       accepts,
-      resource: { url: `mcp://tool/${t.name}`, description: `Date Math: ${t.description}`, mimeType: "application/json", serviceName: "Date Math", tags: SEARCH_TAGS[t.name] },
+      resource: { url: `mcp://tool/${t.name}`, description: `Date Math: ${t.description}`, mimeType: "application/json", serviceName: "Date Math", tags: SEARCH_TAGS[t.name], iconUrl: ICON_URL },
       extensions: declareDiscoveryExtension({
         toolName: t.name,
         description: t.description,
