@@ -2,6 +2,7 @@
 // Built from the tool registry (description, example input) and the generated output examples,
 // so pages stay in sync with the API. Built once per isolate and cached.
 import { CSS, esc, FOOTER, GROUPS, headLinks, SHORT, siteHeader, toolSlug, tryScript } from "./landing";
+import { FAQS } from "./faq";
 import outputExamples from "./output-examples.json";
 import { TOOLS, type Tool } from "./tools";
 
@@ -39,6 +40,13 @@ const PAGE_CSS = `
   .related li { display: grid; grid-template-columns: 220px 1fr; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--rule); font-size: 14px; }
   .related li span { color: #444; }
   .tabs.single { display: none; }
+  .faq { border-top: 1px solid var(--ink); }
+  .faq details { border-bottom: 1px solid var(--rule); padding: 14px 0; }
+  .faq summary { cursor: pointer; font-weight: 500; list-style: none; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::before { content: "+"; display: inline-block; width: 20px; color: var(--muted); font-family: var(--mono); }
+  .faq details[open] summary::before { content: "-"; }
+  .faq p { margin: 8px 0 0 20px; color: #333; max-width: 70ch; }
   @media (max-width: 760px) { .related li { grid-template-columns: 1fr; gap: 2px; } }
 `;
 
@@ -73,6 +81,17 @@ export function toolPageHtml(origin: string, version: string, t: Tool): string {
     documentation: `${origin}/openapi.json`,
     provider: { "@type": "Organization", name: "Date Math", url: origin },
   }).replace(/</g, "\\u003c");
+  const faqs = FAQS[t.name] ?? [];
+  const faqLd = faqs.length
+    ? JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: faqs.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+      }).replace(/</g, "\\u003c")
+    : "";
+  const faqRows = faqs
+    .map((f, i) => `<details${i === 0 ? " open" : ""}><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`)
+    .join("\n        ");
 
   const html = `<!doctype html>
 <html lang="en">
@@ -84,7 +103,7 @@ export function toolPageHtml(origin: string, version: string, t: Tool): string {
 <link rel="canonical" href="${esc(url)}">
 ${headLinks(origin)}<style>
 ${CSS}${PAGE_CSS}</style>
-<script type="application/ld+json">${ld}</script>
+<script type="application/ld+json">${ld}</script>${faqLd ? `\n<script type="application/ld+json">${faqLd}</script>` : ""}
 </head>
 <body>
 ${siteHeader(version, "/#")}
@@ -143,6 +162,20 @@ ${siteHeader(version, "/#")}
     </div>
   </section>
 ${
+  faqRows
+    ? `
+  <section id="faq">
+    <div class="wrap">
+      <h2>Questions</h2>
+      <p class="sub">Common questions, answered with real results from the tool.</p>
+      <div class="faq">
+        ${faqRows}
+      </div>
+    </div>
+  </section>
+`
+    : ""
+}${
   relatedRows
     ? `
   <section id="related">
