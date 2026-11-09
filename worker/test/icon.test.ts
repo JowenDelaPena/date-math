@@ -43,7 +43,9 @@ describe("home page for search engines", () => {
     it(`${ua.slice(25, 50)} gets the HTML page with the verification tag even with Accept */*`, async () => {
       const res = await app.request("/", { headers: { Accept: "*/*", "User-Agent": ua } });
       expect(res.headers.get("Content-Type")).toContain("text/html");
-      expect(await res.text()).toContain('name="google-site-verification"');
+      const html = await res.text();
+      expect(html).toContain('name="google-site-verification"');
+      expect(html).toContain('<meta name="msvalidate.01" content="6B92A3B5D3BBBAFE913C8CF0750289F7">');
     });
   }
 
