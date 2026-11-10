@@ -146,6 +146,10 @@ describe("MCP free tier", () => {
     expect(third.result.isError).toBe(true);
     expect(JSON.stringify(third.result)).toContain(PAID_ENV.PAY_TO);
     expect(JSON.stringify(third.result)).not.toContain("Thursday");
+    // content[0] stays the machine-readable terms (x402 clients read only that); content[1] explains it in words.
+    expect(JSON.parse(third.result.content[0].text).accepts[0].payTo).toBe(PAID_ENV.PAY_TO);
+    expect(third.result.content[1].text).toMatch(/^Payment required\. This client has used its 2 free Date Math calls for today \(they reset at 00:00 UTC\)\. Each further call costs \$0\.001/);
+    expect(third.result.content[1].text).toContain("/llms.txt");
     // A different IP has its own allowance.
     const other = await call(env, "198.51.100.9");
     expect(other.result.structuredContent.weekday).toBe("Thursday");

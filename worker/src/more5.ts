@@ -119,14 +119,21 @@ function boolOf(body: Record<string, unknown>, key: string): boolean | undefined
   throw new InputError("invalid_boolean", `${key} must be true or false`);
 }
 
-function oneOf<T extends string>(v: unknown, field: string, allowed: readonly T[], dflt: T): T {
+/** Lower case, spaces and hyphens to underscores: "Modified Following" -> "modified_following". */
+const norm = (v: string) => v.trim().toLowerCase().replace(/[\s-]+/g, "_");
+
+/** One of the allowed words, accepting any case, spaces for underscores, and the given synonyms. */
+function oneOf<T extends string>(v: unknown, field: string, allowed: readonly T[], dflt: T, aliases: Record<string, T> = {}): T {
   if (v === undefined) return dflt;
-  if (typeof v !== "string" || !(allowed as readonly string[]).includes(v)) throw new InputError(`invalid_${field}`, `${field} must be one of ${allowed.join(", ")}`);
-  return v as T;
+  const k = typeof v === "string" ? norm(v) : "";
+  const hit = (allowed as readonly string[]).includes(k) ? (k as T) : aliases[k];
+  if (!hit) throw new InputError(`invalid_${field}`, `${field} must be one of ${allowed.join(", ")}`);
+  return hit;
 }
 
 const WEEK_STARTS = ["monday", "sunday", "saturday"] as const;
-const weekStartOf = (v: unknown) => ({ monday: 1, sunday: 0, saturday: 6 })[oneOf(v, "week_start", WEEK_STARTS, "monday")];
+const weekStartOf = (v: unknown) =>
+  ({ monday: 1, sunday: 0, saturday: 6 })[oneOf(v, "week_start", WEEK_STARTS, "monday", { mon: "monday", iso: "monday", sun: "sunday", sat: "saturday" })];
 const fiscalStartOf = (body: Record<string, unknown>) => intIn(body, "fiscal_year_start", 1, 1, 12);
 
 // ---------- calendar units (shared by date_range and time_buckets) ----------
@@ -214,7 +221,11 @@ const ALIASES: Record<string, string> = {
   this_day: "today", previous_day: "yesterday",
 };
 
-interface Range { s: number; e: number; unit: Unit; n: number; whole: boolean }
+interface Range { s: number; e: number; unit: Unit; n: number; whole: boolean; fiscal?: boolean }
+
+/** "FY2027", "FY2027 Q2", "Q2 FY2027", "FY27-H1": a fiscal year named by the calendar year it ends in. */
+const FY_RE = /^(?:([qh])([1-4])[\s_-]*)?fy[\s_-]?(\d{4}|\d{2})(?:[\s_-]*([qh])([1-4]))?$/i;
+const FISCAL_WORDS = /(^|_)(fiscal|fy)(_|$)|^f[yq]td$/;
 
 /** Named calendar periods ("2026-Q3", "Q3 2026", "2026") rather than periods relative to today. */
 const isExplicit = (p: string) => /^(\d|q[1-4]\b)/i.test(p.trim());
@@ -224,9 +235,21 @@ const PERIOD_HELP = 'period must be like "last_month", "this_quarter", "ytd", "l
 function parsePeriod(period: unknown, today: number, c: Cal, includeToday: boolean | undefined): Range {
   if (typeof period === "number" && Number.isInteger(period)) period = String(period); // 2026 sent as a JSON number
   if (typeof period !== "string" || !period.trim()) throw new InputError("invalid_period", PERIOD_HELP);
+  const fy = FY_RE.exec(period.trim());
+  if (fy) {
+    const part = (fy[1] ?? fy[4])?.toLowerCase(), k = Number(fy[2] ?? fy[5]);
+    if (part === "h" && k > 2) throw new InputError("invalid_period", `a fiscal year has halves H1 and H2, got "${period}"`);
+    const year = fy[3].length === 2 ? 2000 + Number(fy[3]) : Number(fy[3]);
+    const start = Date.UTC(c.fiscal === 1 ? year : year - 1, c.fiscal - 1, 1); // FY2027 with a July start = July 2026
+    const unit: Unit = part === "q" ? "quarter" : part === "h" ? "half" : "year";
+    const s = unit === "year" ? start : addUnits(unit, start, k - 1);
+    return { s, e: addUnits(unit, s, 1), unit, n: 1, whole: true, fiscal: true };
+  }
   let p = period.trim().toLowerCase();
   // "2026 Q3", "Q3 2026", "2026-03" keep their shape; word periods use underscores ("last 7 days" -> last_7_days).
-  p = isExplicit(p) ? p.replace(/\s+/g, "-") : p.replace(/[\s-]+/g, "_").replace(/^(previous|past)_/, "last_");
+  p = isExplicit(p) ? p.replace(/\s+/g, "-") : p.replace(/[\s-]+/g, "_").replace(/^(previous|past|prior)_/, "last_");
+  // "this fiscal year", "fiscal ytd", "fytd": the same periods, on the fiscal year from fiscal_year_start.
+  p = p.replace(/^fytd$/, "year_to_date").replace(/^fqtd$/, "quarter_to_date").replace(/(^|_)(fiscal|fy)(?=_|$)_?/g, "$1").replace(/_$/, "");
   p = ALIASES[p] ?? p;
   const whole = (unit: Unit, s: number, n = 1): Range => ({ s, e: addUnits(unit, s, n), unit, n, whole: true });
   const tomorrow = today + DAY_MS;
@@ -297,8 +320,11 @@ export function dateRange(body: Record<string, unknown>) {
   const offsetAt = fastCursor(tz);
   const c: Cal = { weekStart: weekStartOf(body.week_start), fiscal: fiscalStartOf(body) };
   const today = localDay(offsetAt, body.as_of === undefined ? Date.now() : pointMs(body.as_of, "as_of", offsetAt));
+  if (typeof body.period === "string" && body.fiscal_year_start === undefined && (FISCAL_WORDS.test(norm(body.period)) || FY_RE.test(body.period.trim()))) {
+    throw new InputError("missing_fiscal_year_start", 'fiscal periods need fiscal_year_start: the month number the fiscal year starts in, e.g. 4 for April or 7 for July (1 = calendar year)');
+  }
   const r = parsePeriod(body.period, today, c, boolOf(body, "include_today"));
-  const explicit = isExplicit(String(body.period));
+  const explicit = isExplicit(String(body.period)) && !r.fiscal;
   if (new Date(r.s).getUTCFullYear() < 1000 || new Date(r.e).getUTCFullYear() > 9999) throw new InputError("out_of_range", "the range must fall between years 1000 and 9999");
 
   const out: Record<string, unknown> = {
@@ -312,7 +338,10 @@ export function dateRange(body: Record<string, unknown>) {
   if (!explicit && c.weekStart !== 1) out.week_start = WEEKDAYS[c.weekStart].toLowerCase();
   if (!explicit && c.fiscal !== 1) out.fiscal_year_start = MONTH_NAMES[c.fiscal - 1];
 
-  const compare = body.compare === undefined ? undefined : oneOf(body.compare, "compare", COMPARE, "previous_period");
+  const compare = body.compare === undefined ? undefined : oneOf(body.compare, "compare", COMPARE, "previous_period", {
+    previous: "previous_period", prior: "previous_period", prior_period: "previous_period", period_over_period: "previous_period", pop: "previous_period",
+    yoy: "previous_year", year_over_year: "previous_year", last_year: "previous_year", prior_year: "previous_year", same_period_last_year: "previous_year",
+  });
   if (compare) {
     let s: number, e: number, method: string;
     const len = r.e - r.s;
@@ -349,7 +378,10 @@ const BUCKET_REACH: Record<(typeof BUCKETS)[number], number> = { minute: 2, hour
 export function timeBuckets(body: Record<string, unknown>) {
   const tz = zoneOf(body.timezone);
   const parseAt = fastCursor(tz);
-  const bucket = oneOf(body.bucket, "bucket", BUCKETS, "day");
+  const bucket = oneOf(body.bucket, "bucket", BUCKETS, "day", {
+    minutes: "minute", hours: "hour", hourly: "hour", days: "day", daily: "day", weeks: "week", weekly: "week",
+    months: "month", monthly: "month", quarters: "quarter", quarterly: "quarter", years: "year", yearly: "year", annual: "year", annually: "year",
+  });
   const c: Cal = { weekStart: weekStartOf(body.week_start), fiscal: fiscalStartOf(body) };
   const size = intIn(body, "size", 1, 1, 30);
   if (bucket === "minute" || bucket === "hour") {
@@ -549,10 +581,23 @@ function* monthStarts(a: number, b: number): Generator<number> {
   }
 }
 
+const ADJUST_ALIASES: Record<string, Adjust> = {
+  following: "next", forward: "next", next_business_day: "next", preceding: "previous", backward: "previous", previous_business_day: "previous",
+  modified: "modified_following", mod_following: "modified_following", mod_preceding: "modified_preceding", closest: "nearest",
+  no_adjustment: "none", unadjusted: "none",
+};
+
 function buildRule(body: Record<string, unknown>): Rule {
   if (body.rule === undefined) throw new InputError("invalid_rule", `rule is required: one of ${RULES.join(", ")}`);
-  const kind = oneOf(body.rule, "rule", RULES, "weekly");
-  const adjust = kind === "nth_business_day" ? "none" : oneOf(body.adjust, "adjust", ADJUSTS, "next");
+  // Natural names: "last business day" and "first business day" are nth_business_day with n -1 / 1; "monthly" is
+  // day_of_month when a day is given, nth_business_day when n is given.
+  const r = typeof body.rule === "string" ? norm(body.rule) : "";
+  if ((r === "last_business_day" || r === "first_business_day") && body.n === undefined) body = { ...body, n: r === "last_business_day" ? -1 : 1 };
+  const kind = oneOf(body.rule, "rule", RULES, "weekly", {
+    last_business_day: "nth_business_day", first_business_day: "nth_business_day", business_day: "nth_business_day", nth: "nth_business_day",
+    day: "day_of_month", monthly: body.n !== undefined && body.day === undefined ? "nth_business_day" : "day_of_month", weekdays: "weekly", crontab: "cron",
+  });
+  const adjust = kind === "nth_business_day" ? "none" : oneOf(body.adjust, "adjust", ADJUSTS, "next", ADJUST_ALIASES);
   const months = monthsFilter(body.months);
   const monthText = months ? [...months].sort((x, y) => x - y).map((x) => MONTH_ABBR[x - 1]).join(", ") : "every month";
   const inMonths = (label: number) => !months || months.has(new Date(label).getUTCMonth() + 1);

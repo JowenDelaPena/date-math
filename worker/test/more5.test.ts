@@ -94,7 +94,7 @@ describe("date_range", () => {
     expect(() => dateRange({ period: "mtd", as_of: "2026-11-01", include_today: false })).toThrow(/empty/);
     expect(() => dateRange({ period: "today", timezone: "Mars/Base" })).toThrow(/time zone/);
     expect(() => dateRange({ period: "today", week_start: "friday" })).toThrow(/week_start/);
-    expect(() => dateRange({ period: "today", compare: "yoy" })).toThrow(/compare/);
+    expect(() => dateRange({ period: "today", compare: "banana" })).toThrow(/compare/);
   });
 });
 
@@ -141,6 +141,43 @@ describe("regressions found in review (2026-11-10)", () => {
     expect(dateRange({ period: "2026", fiscal_year_start: 7 })).not.toHaveProperty("fiscal_year_start");
     expect(dateRange({ period: "2026-W10", week_start: "sunday" })).not.toHaveProperty("week_start");
     expect(dateRange({ period: 2026 })).toMatchObject({ label: "2026", days: 365 });
+  });
+});
+
+describe("natural wordings (found by organic use, 2026-11-10)", () => {
+  const at = { as_of: "2026-11-10" };
+  it("date_range: fiscal periods, FY names, compare synonyms, capitalised options", () => {
+    expect(dateRange({ period: "this fiscal year", fiscal_year_start: 7, ...at })).toMatchObject({ label: "FY2027", start_date: "2026-07-01", end_date: "2027-06-30" });
+    expect(dateRange({ period: "last fiscal quarter", fiscal_year_start: 4, ...at })).toMatchObject({ label: "Q2 FY2027", start_date: "2026-07-01" });
+    expect(dateRange({ period: "fiscal ytd", fiscal_year_start: 4, ...at })).toMatchObject({ start_date: "2026-04-01", end_date: "2026-11-10" });
+    expect(dateRange({ period: "FYTD", fiscal_year_start: 10, ...at })).toMatchObject({ start_date: "2026-10-01" });
+    expect(dateRange({ period: "FY2027", fiscal_year_start: 7 })).toMatchObject({ label: "FY2027", start_date: "2026-07-01", end_date: "2027-06-30", fiscal_year_start: "July" });
+    expect(dateRange({ period: "Q2 FY2027", fiscal_year_start: 7 })).toMatchObject({ label: "Q2 FY2027", start_date: "2026-10-01", end_date: "2026-12-31" });
+    expect(dateRange({ period: "FY27-H2", fiscal_year_start: 4 })).toMatchObject({ label: "H2 FY2027", start_date: "2026-10-01", end_date: "2027-03-31" });
+    expect(dateRange({ period: "FY2026", fiscal_year_start: 1 })).toMatchObject({ start_date: "2026-01-01", end_date: "2026-12-31" });
+    expect(() => dateRange({ period: "this fiscal year", ...at })).toThrow(/fiscal_year_start/);
+    expect(() => dateRange({ period: "FY2027" })).toThrow(/fiscal_year_start/);
+    expect(dateRange({ period: "last month", compare: "YoY", ...at }).comparison).toMatchObject({ type: "previous_year", start_date: "2025-10-01" });
+    expect(dateRange({ period: "last month", compare: "prior period", ...at }).comparison).toMatchObject({ type: "previous_period", start_date: "2026-09-01" });
+    expect(dateRange({ period: "this week", week_start: "Sunday", ...at })).toMatchObject({ start_date: "2026-11-08" });
+    expect(dateRange({ period: "prior month", ...at })).toMatchObject({ start_date: "2026-10-01" });
+  });
+
+  it("time_buckets: plural and -ly bucket names", () => {
+    for (const bucket of ["days", "Daily", "DAY"]) expect(timeBuckets({ from: "2026-11-01", to: "2026-11-03", bucket }).count).toBe(2);
+    expect(timeBuckets({ from: "2026-01-01", to: "2027-01-01", bucket: "quarterly" }).count).toBe(4);
+    expect(() => timeBuckets({ from: "2026-01-01", to: "2027-01-01", bucket: "fortnight" })).toThrow(/bucket must be one of/);
+  });
+
+  it("business_day_schedule: rule and adjust in everyday or finance words", () => {
+    const base = { country: "GB", from: "2026-11-10", count: 1 };
+    expect(businessDaySchedule({ rule: "last business day", ...base }).runs[0].date).toBe("2026-11-30");
+    expect(businessDaySchedule({ rule: "First Business Day", ...base }).runs[0].date).toBe("2026-12-01");
+    expect(businessDaySchedule({ rule: "monthly", day: 25, adjust: "Modified Following", ...base }).runs[0]).toMatchObject({ date: "2026-11-25", scheduled_date: "2026-11-25" });
+    expect(businessDaySchedule({ rule: "monthly", n: 2, ...base }).runs[0].date).toBe("2026-12-02");
+    expect(businessDaySchedule({ rule: "weekly", weekdays: [1], adjust: "following", country: "GB", from: "2026-12-27", count: 1 }).runs[0].date).toBe("2026-12-29");
+    expect(businessDaySchedule({ rule: "weekly", weekdays: [1], adjust: "preceding", country: "GB", from: "2026-12-20", count: 2 }).runs.map((r) => r.date)).toEqual(["2026-12-21", "2026-12-24"]);
+    expect(() => businessDaySchedule({ rule: "monthly" })).toThrow(/day_of_month rules need day/);
   });
 });
 

@@ -155,11 +155,34 @@ function buildServer(p: Payments | null, free: number, takeFree: (() => Promise<
     // content[0].text is the channel the x402 MCP spec requires, so drop the structured copy on errors.
     if (res.isError && res.structuredContent) {
       const { structuredContent: _, ...rest } = res;
-      return rest;
+      res = rest;
+    }
+    // A client without a wallet only sees the JSON terms. Add a plain explanation as a second content item for the
+    // agent and the person using it. x402 clients read the terms from content[0] only, so paying is unaffected.
+    if (res.isError && !req.params._meta?.["x402/payment"] && isPaymentTerms(res.content?.[0]?.text)) {
+      // free > 0 only when this client had a free allowance (known IP and quota store), so reaching paid terms means it is used up.
+      res = { ...res, content: [...res.content, { type: "text", text: paymentHelp(p.cfg.PRICE, free) }] };
     }
     return res;
   });
   return server;
+}
+
+function isPaymentTerms(text: string | undefined): boolean {
+  try {
+    const j = JSON.parse(text ?? "");
+    return typeof j === "object" && j !== null && "x402Version" in j && Array.isArray(j.accepts);
+  } catch {
+    return false;
+  }
+}
+
+/** What an unpaid caller is told when a tool call needs payment. */
+export function paymentHelp(price: string, free: number): string {
+  const why = free
+    ? `This client has used its ${free} free Date Math calls for today (they reset at 00:00 UTC).`
+    : "This Date Math tool is paid.";
+  return `Payment required. ${why} Each further call costs ${price} in USDC on Base, paid per call with x402: an x402-enabled MCP client or wallet (for example @x402/mcp) pays automatically, no account or API key needed. current_time stays free. Setup: ${ORIGIN}/llms.txt`;
 }
 
 type Json = Record<string, any>;

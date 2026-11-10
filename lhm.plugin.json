@@ -2857,7 +2857,7 @@
         "properties": {
           "period": {
             "type": "string",
-            "description": "Relative: today, yesterday, tomorrow, this_/last_/next_ + week|month|quarter|half|year, week_to_date|month_to_date|quarter_to_date|year_to_date (or wtd, mtd, qtd, ytd), last_N_days|weeks|months|quarters|years, next_N_days|weeks|months|... Spaces work too (\"last 7 days\"). last_N_days = N complete days before today; last_N_months = N complete calendar months before this one. Explicit: 2026, 2026-H1, 2026-Q3 or \"Q3 2026\", 2026-03, 2026-W14 (ISO week), 2026-03-15",
+            "description": "today, yesterday, this/last/next week|month|quarter|half|year, mtd, qtd, ytd, last_N_days|weeks|months, next_N_..., 2026, 2026-H1, 2026-Q3, 2026-03, 2026-W14, 2026-03-15. Fiscal (needs fiscal_year_start): \"this fiscal year\", \"fiscal ytd\", FY2027, \"Q2 FY2027\". Spaces work. last_N_days = complete days before today",
             "example": "last_month"
           },
           "timezone": {
@@ -2866,7 +2866,7 @@
           },
           "as_of": {
             "type": "string",
-            "description": "Reference date for relative periods: YYYY-MM-DD, or a datetime (its local date is used). Default: today in timezone"
+            "description": "Reference date or datetime. Default today"
           },
           "week_start": {
             "type": "string",
@@ -2876,18 +2876,18 @@
               "saturday"
             ],
             "default": "monday",
-            "description": "First day of the week. monday = ISO weeks (labels like 2026-W46)"
+            "description": "Week start; monday = ISO weeks"
           },
           "fiscal_year_start": {
             "type": "integer",
             "minimum": 1,
             "maximum": 12,
             "default": 1,
-            "description": "Month the fiscal year starts (1 = January). Quarters, halves and years follow it; fiscal years are named by the calendar year they end in (start 7: FY2027 = July 2026 – June 2027)"
+            "description": "Fiscal year's first month (1-12). FY named by its end year: start 7, FY2027 = Jul 2026-Jun 2027"
           },
           "include_today": {
             "type": "boolean",
-            "description": "End the range with today (inclusive). Default true for *_to_date periods, false for last_N_* periods (complete days only)"
+            "description": "End with today. Default true for *_to_date, false for last_N_*"
           },
           "compare": {
             "type": "string",
@@ -2895,7 +2895,7 @@
               "previous_period",
               "previous_year"
             ],
-            "description": "Also return a comparison range. previous_period: the same length immediately before (to-date periods: the same number of days into the previous unit). previous_year: the same dates a year earlier (weeks: 52 weeks earlier, same weekdays)"
+            "description": "Comparison range: previous_period (or to-date: same days into the previous unit), previous_year (weeks: 52 weeks back). yoy works"
           }
         }
       },
@@ -2922,31 +2922,26 @@
             "type": "string"
           },
           "as_of": {
-            "type": "string",
-            "description": "The local date that relative periods were resolved against"
+            "type": "string"
           },
           "label": {
-            "type": "string",
-            "description": "e.g. \"October 2026\", \"Q3 2026\", \"2026-W46\", \"FY2027\", or \"start to end\""
+            "type": "string"
           },
           "start_date": {
-            "type": "string",
-            "description": "First day (YYYY-MM-DD)"
+            "type": "string"
           },
           "end_date": {
-            "type": "string",
-            "description": "Last day, inclusive (YYYY-MM-DD)"
+            "type": "string"
           },
           "days": {
             "type": "integer"
           },
           "start": {
-            "type": "string",
-            "description": "Local start, ISO 8601 with offset (local midnight)"
+            "type": "string"
           },
           "end_exclusive": {
             "type": "string",
-            "description": "Local end, exclusive: the midnight after end_date. Filter with >= start and < end_exclusive"
+            "description": "Exclusive end; filter >= start and < end_exclusive"
           },
           "start_utc": {
             "type": "string"
@@ -2958,8 +2953,7 @@
             "type": "string"
           },
           "fiscal_year_start": {
-            "type": "string",
-            "description": "Month name, when not January"
+            "type": "string"
           },
           "comparison": {
             "type": "object",
@@ -2986,23 +2980,19 @@
                 "type": "string"
               },
               "start_date": {
-                "type": "string",
-                "description": "First day (YYYY-MM-DD)"
+                "type": "string"
               },
               "end_date": {
-                "type": "string",
-                "description": "Last day, inclusive (YYYY-MM-DD)"
+                "type": "string"
               },
               "days": {
                 "type": "integer"
               },
               "start": {
-                "type": "string",
-                "description": "Local start, ISO 8601 with offset (local midnight)"
+                "type": "string"
               },
               "end_exclusive": {
-                "type": "string",
-                "description": "Local end, exclusive: the midnight after end_date. Filter with >= start and < end_exclusive"
+                "type": "string"
               },
               "start_utc": {
                 "type": "string"
@@ -3038,7 +3028,7 @@
               "weekly",
               "cron"
             ],
-            "description": "nth_business_day needs n, day_of_month needs day, weekly needs weekdays, cron needs expression"
+            "description": "nth_business_day (n), day_of_month (day), weekly (weekdays), cron (expression). \"last business day\" and \"first business day\" work"
           },
           "n": {
             "type": "integer",
@@ -3098,7 +3088,7 @@
               "none"
             ],
             "default": "next",
-            "description": "For weekend/holiday dates. modified_following: next, unless that is next month, then previous"
+            "description": "For weekend/holiday dates. modified_following: next, unless that is next month, then previous. following/preceding work"
           },
           "months": {
             "type": "array",
@@ -3332,7 +3322,8 @@
               "quarter",
               "year"
             ],
-            "default": "day"
+            "default": "day",
+            "description": "Plurals and daily/weekly/monthly also work"
           },
           "size": {
             "type": "integer",
