@@ -41,6 +41,18 @@ describe("x402 paywall", () => {
     expect(JSON.parse(text).error.code).toBe("payment_required");
   });
 
+  it("keeps every tool's payment terms under 7,900 bytes", async () => {
+    // Paid clients echo these terms back in a header with the payment. On 2026-11-10 business_day_schedule's terms
+    // were 9,292 bytes and its real payment was refused (402) while every tool under 7,900 bytes settled.
+    const { TOOLS } = await import("../src/tools");
+    for (const t of TOOLS) {
+      const res = await post(t.path, t.example);
+      const size = res.headers.get("PAYMENT-REQUIRED")?.length ?? 0;
+      expect(size, t.name).toBeGreaterThan(0);
+      expect(size, t.name).toBeLessThan(7900);
+    }
+  });
+
   it("keeps probes, overview and spec free", async () => {
     for (const p of ["/", "/v1/version", "/v1/health", "/openapi.json", "/v1/openapi.json"]) {
       expect((await call(p)).status, p).toBe(200);

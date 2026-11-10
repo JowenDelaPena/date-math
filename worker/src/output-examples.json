@@ -99,7 +99,7 @@
     "expression": "0 9 * * 1-5",
     "timezone": "Asia/Manila",
     "description": "At 09:00, Monday through Friday",
-    "from": "2026-11-10T13:23:34.584Z",
+    "from": "2026-11-10T13:49:30.695Z",
     "next_runs": [
       {
         "utc": "2026-11-11T01:00:00Z",
@@ -130,7 +130,7 @@
     ]
   },
   "/v1/city": {
-    "at": "2026-11-10T13:23:34.870Z",
+    "at": "2026-11-10T13:49:31.430Z",
     "results": [
       {
         "query": "Cebu",
@@ -142,7 +142,7 @@
           "timezone": "Asia/Manila",
           "population": 806817,
           "match": "exact",
-          "local_time": "2026-11-10T21:23:34+08:00",
+          "local_time": "2026-11-10T21:49:31+08:00",
           "weekday": "Tuesday",
           "utc_offset": "+08:00"
         },
@@ -411,7 +411,7 @@
     "timezone": "Europe/London",
     "adjust": "none",
     "from": "2026-11-10T00:00:00+00:00",
-    "count": 3,
+    "count": 2,
     "runs": [
       {
         "date": "2026-12-03",

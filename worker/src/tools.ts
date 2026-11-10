@@ -218,9 +218,9 @@ TOOLS.push(
     path: "/v1/business_day_schedule",
     title: "Business-day job schedule",
     description:
-      'Schedules that understand business days and public holidays, which cron cannot express: "3rd business day of the month at 09:00", "last business day", "every Monday, or the next business day if it is a holiday", "the 25th, modified following", or any cron expression with a holiday rule. Returns the next run times and whether the job should run on a given date (today by default). Country holidays, custom holidays and workweeks, DST-aware. Use for payroll, billing, reporting and batch jobs.',
+      'Job schedules that skip weekends and public holidays, which cron cannot express: "3rd business day of the month at 09:00", "last business day", "every Monday, or the next business day if it is a holiday", or any cron with a holiday rule. Returns the next runs and whether it runs today. DST-aware. Use for payroll, billing, reports and batch jobs.',
     run: businessDaySchedule,
-    example: { rule: "nth_business_day", n: 3, time: "09:00", timezone: "Europe/London", country: "GB", from: "2026-11-10", count: 3 },
+    example: { rule: "nth_business_day", n: 3, timezone: "Europe/London", country: "GB", from: "2026-11-10", count: 2 },
   },
   {
     name: "time_buckets",
