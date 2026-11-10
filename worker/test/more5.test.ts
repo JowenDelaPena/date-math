@@ -98,6 +98,52 @@ describe("date_range", () => {
   });
 });
 
+describe("regressions found in review (2026-11-10)", () => {
+  it("long year and month ranges are allowed up to 500 buckets and 200 years", () => {
+    // Before the fix, any year range over ~77 years was rejected as "more than 1000 buckets".
+    expect(timeBuckets({ from: "1950-01-01", to: "2049-01-01", bucket: "year" }).count).toBe(99);
+    expect(timeBuckets({ from: "1801-01-01", to: "2000-01-01", bucket: "year" }).count).toBe(199);
+    expect(timeBuckets({ from: "1950-01-01", to: "1991-08-01", bucket: "month" }).count).toBe(499);
+    expect(timeBuckets({ from: "1950-01-01", to: "1991-09-01", bucket: "month" }).count).toBe(500);
+    expect(() => timeBuckets({ from: "1950-01-01", to: "1991-09-02", bucket: "month" })).toThrow(/more than 500 month/);
+    expect(() => timeBuckets({ from: "2000-01-01", to: "2010-01-01", bucket: "week" })).toThrow(/more than 500 week/);
+    expect(timeBuckets({ from: "2026-01-01", to: "2028-09-26", bucket: "day" }).count).toBe(999);
+    expect(() => timeBuckets({ from: "1100-01-01", to: "2000-01-01", bucket: "year" })).toThrow(/200 years/);
+  });
+
+  it("years below 1000 are rejected instead of being read as 19xx", () => {
+    expect(() => timeBuckets({ from: "0050-01-01T00:00", to: "0050-01-03T00:00", bucket: "day" })).toThrow(/1000 and 9999/);
+    expect(() => timeBuckets({ from: "0050-01-01", to: "0050-01-03", bucket: "day" })).toThrow(/1000 and 9999/);
+    expect(() => dateRange({ period: "today", as_of: "0999-12-31T00:00:00Z" })).toThrow(/1000 and 9999/);
+  });
+
+  it("month edges are exact local midnights across DST and historic offsets", () => {
+    const r = timeBuckets({ from: "1950-01-01", to: "1991-09-01", bucket: "month", timezone: "America/New_York" });
+    for (const b of r.buckets) expect(b.start, b.label).toMatch(/T00:00:00[-+]\d{2}:\d{2}$/);
+    for (let i = 1; i < r.count; i++) expect(r.buckets[i].start_utc).toBe(r.buckets[i - 1].end_utc);
+  });
+
+  it("schedules near the end of the holiday data list what exists and say why the list stops", () => {
+    const r = businessDaySchedule({ rule: "weekly", weekdays: [6], adjust: "next", country: "US", count: 50, from: "2050-11-01" });
+    expect(r.count).toBe(8);
+    expect(r.runs.at(-1)!.date).toBe("2050-12-27"); // Sat Dec 31 would move into 2051, past the data
+    expect(r.note).toMatch(/ends on 2050-12-31/);
+    expect(businessDaySchedule({ rule: "day_of_month", day: 15, country: "US", from: "2050-08-01", count: 5 }).count).toBe(5);
+    expect(() => businessDaySchedule({ rule: "weekly", weekdays: [1], country: "US", from: "1999-06-01" })).toThrow(/2000–2050/);
+  });
+
+  it("a run moved onto another scheduled day is reported as that day's own run", () => {
+    const r = businessDaySchedule({ rule: "weekly", weekdays: [1, 2], country: "GB", from: "2026-12-28", count: 1 });
+    expect(r.runs[0]).toMatchObject({ date: "2026-12-29", scheduled_date: "2026-12-29", adjusted: false });
+  });
+
+  it("named periods do not echo options that do not apply to them; numeric years work", () => {
+    expect(dateRange({ period: "2026", fiscal_year_start: 7 })).not.toHaveProperty("fiscal_year_start");
+    expect(dateRange({ period: "2026-W10", week_start: "sunday" })).not.toHaveProperty("week_start");
+    expect(dateRange({ period: 2026 })).toMatchObject({ label: "2026", days: 365 });
+  });
+});
+
 describe("time_buckets", () => {
   it("day buckets are 23 or 25 hours on clock-change days", () => {
     const r = timeBuckets({ from: "2026-10-31", to: "2026-11-03", bucket: "day", timezone: "America/New_York" });

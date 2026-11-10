@@ -49,6 +49,16 @@ function offsetTable(tz: string, lo: number, hi: number): OffsetAt {
   };
 }
 
+/** Direct offset lookups with a cache: for a few hundred far-apart instants (month and year bucket edges). */
+function memoOffsets(tz: string): OffsetAt {
+  const memo = new Map<number, number>();
+  return (ms: number) => {
+    let v = memo.get(ms);
+    if (v === undefined) memo.set(ms, (v = offsetMinutes(ms, tz)));
+    return v;
+  };
+}
+
 /** Local wall time (UTC-labelled ms) -> instant. DST gaps move forward, repeated times take the first occurrence. */
 function instantOf(offsetAt: OffsetAt, wall: number): number {
   return wallToInstantWith(offsetAt, wall)?.ms ?? wall - offsetAt(wall - DAY_MS) * MIN;
@@ -67,9 +77,18 @@ function zoneOf(v: unknown): string {
   return v === undefined ? "UTC" : assertTimeZone(v, "timezone");
 }
 
-/** A point in time: YYYY-MM-DD (local midnight), local YYYY-MM-DDTHH:MM[:SS], or ISO 8601 with offset/Z. */
+/** A point in time: YYYY-MM-DD (local midnight), local YYYY-MM-DDTHH:MM[:SS], or ISO 8601 with offset/Z. Years 1000–9999. */
 function pointMs(v: unknown, field: string, offsetAt: OffsetAt): number {
+  const ms = parsePoint(v, field, offsetAt);
+  const y = new Date(ms).getUTCFullYear();
+  // Also guards Date.UTC, which reads years 0–99 as 1900–1999.
+  if (y < 1000 || y > 9999) throw new InputError("out_of_range", `${field} must be between the years 1000 and 9999`);
+  return ms;
+}
+
+function parsePoint(v: unknown, field: string, offsetAt: OffsetAt): number {
   if (typeof v === "string") {
+    if (/^0\d{3}-/.test(v)) throw new InputError("out_of_range", `${field} must be between the years 1000 and 9999`);
     if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return instantOf(offsetAt, parseDate(v, field).getTime());
     const l = parseLocal(v);
     if (l) {
@@ -203,6 +222,7 @@ const isExplicit = (p: string) => /^(\d|q[1-4]\b)/i.test(p.trim());
 const PERIOD_HELP = 'period must be like "last_month", "this_quarter", "ytd", "last_7_days", "next_2_weeks", "today", "2026-Q3", "2026-03", "2026", "2026-W14", "2026-H1" or "2026-03-15"';
 
 function parsePeriod(period: unknown, today: number, c: Cal, includeToday: boolean | undefined): Range {
+  if (typeof period === "number" && Number.isInteger(period)) period = String(period); // 2026 sent as a JSON number
   if (typeof period !== "string" || !period.trim()) throw new InputError("invalid_period", PERIOD_HELP);
   let p = period.trim().toLowerCase();
   // "2026 Q3", "Q3 2026", "2026-03" keep their shape; word periods use underscores ("last 7 days" -> last_7_days).
@@ -288,8 +308,9 @@ export function dateRange(body: Record<string, unknown>) {
     label: rangeLabel(r, c, explicit),
     ...rangeOut(r.s, r.e, offsetAt, tz),
   };
-  if (c.weekStart !== 1) out.week_start = WEEKDAYS[c.weekStart].toLowerCase();
-  if (c.fiscal !== 1) out.fiscal_year_start = MONTH_NAMES[c.fiscal - 1];
+  // Named periods ("2026", "2026-Q3", "2026-W14") are calendar/ISO periods, so these options do not apply to them.
+  if (!explicit && c.weekStart !== 1) out.week_start = WEEKDAYS[c.weekStart].toLowerCase();
+  if (!explicit && c.fiscal !== 1) out.fiscal_year_start = MONTH_NAMES[c.fiscal - 1];
 
   const compare = body.compare === undefined ? undefined : oneOf(body.compare, "compare", COMPARE, "previous_period");
   if (compare) {
@@ -317,7 +338,9 @@ export function dateRange(body: Record<string, unknown>) {
 // ---------- time_buckets ----------
 
 const BUCKETS = ["minute", "hour", "day", "week", "month", "quarter", "year"] as const;
-const MAX_BUCKETS = 1000;
+const MAX_BUCKETS = 1000; // minute, hour and day buckets
+const MAX_LONG_BUCKETS = 500; // week, month, quarter and year buckets
+const MAX_SPAN_YEARS = 200;
 const DIVISORS = { minute: [1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30], hour: [1, 2, 3, 4, 6, 8, 12] };
 
 /** How far whole buckets can reach beyond [from, to). */
@@ -328,7 +351,7 @@ export function timeBuckets(body: Record<string, unknown>) {
   const parseAt = fastCursor(tz);
   const bucket = oneOf(body.bucket, "bucket", BUCKETS, "day");
   const c: Cal = { weekStart: weekStartOf(body.week_start), fiscal: fiscalStartOf(body) };
-  const size = intIn(body, "size", 1, 1, 60);
+  const size = intIn(body, "size", 1, 1, 30);
   if (bucket === "minute" || bucket === "hour") {
     if (!DIVISORS[bucket].includes(size)) throw new InputError("invalid_size", `${bucket} size must be one of ${DIVISORS[bucket].join(", ")} (so buckets line up with the clock)`);
   } else if (size !== 1) throw new InputError("invalid_size", `size applies only to minute and hour buckets`);
@@ -337,16 +360,22 @@ export function timeBuckets(body: Record<string, unknown>) {
   const toMs = pointMs(body.to, "to", parseAt);
   if (toMs <= fromMs) throw new InputError("invalid_range", "to must be after from (to is exclusive)");
   const clip = boolOf(body, "clip") ?? false;
-  // Cheap bound before building the offset table: more than MAX_BUCKETS whole days/minutes is always too many.
-  const unitMs = bucket === "minute" ? size * MIN : bucket === "hour" ? size * 60 * MIN : bucket === "day" ? DAY_MS : bucket === "week" ? 7 * DAY_MS : 28 * DAY_MS;
-  if ((toMs - fromMs) / unitMs > MAX_BUCKETS + 2) throw new InputError("too_many_buckets", `more than ${MAX_BUCKETS} buckets; use a larger bucket or a shorter range`);
+  if (toMs - fromMs > MAX_SPAN_YEARS * 366 * DAY_MS) throw new InputError("range_too_large", `from and to must be at most ${MAX_SPAN_YEARS} years apart`);
+  // Cheap early reject before any offset work: the range is surely too many buckets even if every bucket is as
+  // long as it can be (the loop below enforces the exact limit).
+  const longest = { minute: size * MIN, hour: size * 60 * MIN, day: 25 * 60 * MIN, week: 7 * DAY_MS + 60 * MIN, month: 31 * DAY_MS + 60 * MIN, quarter: 92 * DAY_MS + 60 * MIN, year: 366 * DAY_MS + 60 * MIN }[bucket];
+  // Week and longer buckets need about one time zone lookup per edge (~6 µs each on Workers), so they get a lower cap.
+  const maxBuckets = bucket === "minute" || bucket === "hour" || bucket === "day" ? MAX_BUCKETS : MAX_LONG_BUCKETS;
+  const tooMany = () => new InputError("too_many_buckets", `more than ${maxBuckets} ${bucket} buckets; use a larger bucket or a shorter range`);
+  if ((toMs - fromMs) / longest > maxBuckets + 2) throw tooMany();
+  // Minute to week buckets: one offset table for the range (at most ~20 years). Month, quarter and year buckets can
+  // span centuries, where a table would cost far more than looking up each of their at most 1,001 edges directly.
   const reach = BUCKET_REACH[bucket] * DAY_MS;
-  const offsetAt = offsetTable(tz, fromMs - reach, toMs + reach);
+  const offsetAt = ["month", "quarter", "year"].includes(bucket) ? memoOffsets(tz) : offsetTable(tz, fromMs - reach, toMs + reach);
 
   // Bucket edges (instants); bucket i is [edges[i], edges[i + 1]). Each edge is formatted once and shared.
   const edges: number[] = [];
   const labels: (string | null)[] = []; // null: label from the local start time (minute/hour buckets)
-  const tooMany = () => new InputError("too_many_buckets", `more than ${MAX_BUCKETS} buckets; use a larger bucket or a shorter range`);
   if (bucket === "minute" || bucket === "hour") {
     // Real elapsed time, aligned to local clock boundaries and re-aligned after a clock change.
     const step = size * (bucket === "hour" ? 60 : 1) * MIN;
@@ -358,20 +387,31 @@ export function timeBuckets(body: Record<string, unknown>) {
       const offN = offsetAt(next);
       const cand = Math.floor((next + offN * MIN) / step) * step - offN * MIN;
       if (cand > t && offsetAt(cand) === offN) next = cand;
-      if (labels.length >= MAX_BUCKETS) throw tooMany();
+      if (labels.length >= maxBuckets) throw tooMany();
       labels.push(null);
       edges.push((t = next));
     }
   } else {
     const unit = bucket as Unit;
+    // Local midnight -> instant. Guess with the previous edge's offset and verify with one lookup: if the offset at
+    // the guess equals the guess's offset, that instant really shows this wall time (the first occurrence, since the
+    // previous offset is the pre-change one). Only edges just after a clock change need the full method.
+    let prevOff = offsetAt(fromMs);
+    const edgeAt = (wall: number) => {
+      const guess = wall - prevOff * MIN;
+      if (offsetAt(guess) === prevOff) return guess;
+      const ms = instantOf(offsetAt, wall);
+      prevOff = offsetAt(ms);
+      return ms;
+    };
     let s = startOf(unit, localDay(offsetAt, fromMs), c);
-    let a = instantOf(offsetAt, s);
+    let a = edgeAt(s);
     edges.push(a);
     while (a < toMs) {
-      if (labels.length >= MAX_BUCKETS) throw tooMany();
+      if (labels.length >= maxBuckets) throw tooMany();
       labels.push(unitLabel(unit, s, c, false));
       s = addUnits(unit, s, 1);
-      edges.push((a = instantOf(offsetAt, s)));
+      edges.push((a = edgeAt(s)));
     }
   }
   const last = edges.length - 1;
@@ -424,8 +464,13 @@ const MAX_SEARCH_DAYS = 3660;
 /** Business-day calendar with country holidays loaded one year at a time. */
 class BizCal {
   private years = new Map<number, Map<string, string>>();
+  /** Days with known holidays: [dataStart, dataEnd). Unlimited without a country. */
+  readonly dataStart: number;
+  readonly dataEnd: number;
   constructor(private ww: Workweek, private country: unknown, private custom: Set<string>) {
     if (country !== undefined) countryHolidayNames(country, HOLIDAY_YEARS[0], HOLIDAY_YEARS[0]); // validates the code
+    this.dataStart = country === undefined ? -Infinity : Date.UTC(HOLIDAY_YEARS[0], 0, 1);
+    this.dataEnd = country === undefined ? Infinity : Date.UTC(HOLIDAY_YEARS[1] + 1, 0, 1);
   }
   private yearMap(y: number): Map<string, string> {
     let map = this.years.get(y);
@@ -609,20 +654,31 @@ const ADJUST_TEXT: Record<Adjust, string> = {
 
 interface Run { ms: number; day: number; nominal: number }
 
-/** Runs whose actual (adjusted) day is in [dayLo, dayHi), from scheduled days in [a, b). */
+/** Runs whose actual (adjusted) day is in [dayLo, dayHi), from scheduled days in [a, b) (clamped to the holiday data). */
 function runsIn(rule: Rule, cal: BizCal, a: number, b: number, dayLo: number, dayHi: number, offsetAt: OffsetAt): Run[] {
   const out: Run[] = [];
+  [a, b] = [Math.max(a, cal.dataStart), Math.min(b, cal.dataEnd)];
+  if (a >= b) return out;
   for (const nom of rule.nominals(a, b, cal)) {
-    const d = rule.kind === "nth_business_day" ? nom.day : cal.adjust(nom.day, rule.adjust);
+    let d: number | null;
+    try {
+      d = rule.kind === "nth_business_day" ? nom.day : cal.adjust(nom.day, rule.adjust);
+    } catch (e) {
+      // Moving this date would cross the end of the holiday data (e.g. 2050-12-31 to 2051): leave it out.
+      if (e instanceof InputError && e.code === "year_out_of_range") continue;
+      throw e;
+    }
     if (d === null || d < dayLo || d >= dayHi) continue;
     for (const tod of nom.tods) out.push({ ms: instantOf(offsetAt, d + tod), day: d, nominal: nom.day });
   }
   return out;
 }
 
+/** Sort by time and drop duplicates; when a moved run lands on another scheduled run, report the scheduled one. */
 function sortUnique(runs: Run[]): Run[] {
   const seen = new Set<number>();
-  return runs.sort((x, y) => x.ms - y.ms || x.nominal - y.nominal).filter((r) => !seen.has(r.ms) && (seen.add(r.ms), true));
+  const moved = (r: Run) => (r.day === r.nominal ? 0 : 1);
+  return runs.sort((x, y) => x.ms - y.ms || moved(x) - moved(y) || x.nominal - y.nominal).filter((r) => !seen.has(r.ms) && (seen.add(r.ms), true));
 }
 
 export function businessDaySchedule(body: Record<string, unknown>) {
@@ -633,13 +689,17 @@ export function businessDaySchedule(body: Record<string, unknown>) {
   const cal = new BizCal(parseWorkdays(body.workdays), body.country, parseHolidays(body.holidays));
   const fromMs = body.from === undefined ? Date.now() : pointMs(body.from, "from", offsetAt);
   const fromDay = localDay(offsetAt, fromMs);
+  if (fromDay < cal.dataStart || fromDay >= cal.dataEnd) throw new InputError("year_out_of_range", `country holiday data covers ${HOLIDAY_YEARS[0]}–${HOLIDAY_YEARS[1]}`);
 
   // Grow the window until `count` runs are certain (no later scheduled date can be moved in front of them).
+  // With a country, the search stops where the holiday data ends.
   let runs: Run[] = [];
+  let hitDataEnd = false;
   for (let span = 16 * DAY_MS; ; span *= 2) {
-    const end = fromDay + Math.min(span, MAX_SEARCH_DAYS * DAY_MS);
+    const end = Math.min(fromDay + Math.min(span, MAX_SEARCH_DAYS * DAY_MS), cal.dataEnd);
     runs = sortUnique(runsIn(rule, cal, fromDay - MARGIN, end + MARGIN, fromDay, end, offsetAt)).filter((r) => r.ms >= fromMs);
-    if (runs.length >= count || span >= MAX_SEARCH_DAYS * DAY_MS) {
+    if (runs.length >= count || span >= MAX_SEARCH_DAYS * DAY_MS || end === cal.dataEnd) {
+      hitDataEnd = runs.length < count && end === cal.dataEnd;
       runs = runs.slice(0, count);
       break;
     }
@@ -660,7 +720,13 @@ export function businessDaySchedule(body: Record<string, unknown>) {
   const checkDay = body.check_date === undefined ? fromDay : parseDate(body.check_date, "check_date").getTime();
   const onDay = sortUnique(runsIn(rule, cal, checkDay - MARGIN, checkDay + MARGIN + DAY_MS, checkDay, checkDay + DAY_MS, offsetAt));
   const scheduledHere = rule.kind === "nth_business_day" ? [] : rule.nominals(checkDay, checkDay + DAY_MS, cal);
-  const movedTo = scheduledHere.length ? cal.adjust(checkDay, rule.adjust) : checkDay;
+  let movedTo: number | null | "unknown" = checkDay;
+  try {
+    if (scheduledHere.length) movedTo = cal.adjust(checkDay, rule.adjust);
+  } catch (e) {
+    if (!(e instanceof InputError && e.code === "year_out_of_range")) throw e;
+    movedTo = "unknown"; // would move past the end of the holiday data
+  }
   const check = {
     date: day(checkDay),
     weekday: WEEKDAYS[new Date(checkDay).getUTCDay()],
@@ -668,7 +734,7 @@ export function businessDaySchedule(body: Record<string, unknown>) {
     reason: cal.reason(checkDay),
     runs: onDay.length > 0,
     run_times: onDay.map((r) => ({ datetime: localIso(offsetAt, r.ms, tz), utc: isoZ(r.ms), scheduled_date: day(r.nominal) })),
-    ...(scheduledHere.length && movedTo !== checkDay ? { scheduled_run_moved_to: movedTo === null ? "skipped" : day(movedTo) } : {}),
+    ...(scheduledHere.length && movedTo !== checkDay ? { scheduled_run_moved_to: movedTo === null ? "skipped" : movedTo === "unknown" ? "beyond holiday data" : day(movedTo) } : {}),
   };
 
   const holidaysText = body.country !== undefined ? `; holidays: ${String(body.country).toUpperCase()} public holidays` : "";
@@ -681,5 +747,6 @@ export function businessDaySchedule(body: Record<string, unknown>) {
     count: runs.length,
     runs: runs.map(view),
     check,
+    ...(hitDataEnd ? { note: `country holiday data ends on ${HOLIDAY_YEARS[1]}-12-31, so later runs are not listed` } : {}),
   };
 }

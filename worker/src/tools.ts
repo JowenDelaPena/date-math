@@ -227,7 +227,7 @@ TOOLS.push(
     path: "/v1/time_buckets",
     title: "Time buckets for charts",
     description:
-      "Split a time range into minute, hour, day, week, month, quarter or year buckets with exact start and end times in a time zone. DST-aware (23- and 25-hour days, repeated and skipped hours), ISO or Sunday/Saturday weeks, fiscal quarters, partial first and last buckets flagged or clipped. Up to 1,000 buckets. Use for chart axes, time-series grouping and filling empty periods in dashboards.",
+      "Split a time range into minute, hour, day, week, month, quarter or year buckets with exact start and end times in a time zone. DST-aware (23- and 25-hour days, repeated and skipped hours), ISO or Sunday/Saturday weeks, fiscal quarters, partial first and last buckets flagged or clipped. Up to 1,000 buckets (500 for weeks and longer). Use for chart axes, time-series grouping and filling empty periods in dashboards.",
     run: timeBuckets,
     example: { from: "2026-10-31", to: "2026-11-03", bucket: "day", timezone: "America/New_York" },
   },

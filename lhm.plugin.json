@@ -3290,6 +3290,9 @@
                 "type": "string"
               }
             }
+          },
+          "note": {
+            "type": "string"
           }
         }
       },
@@ -3302,7 +3305,7 @@
     {
       "name": "time_buckets",
       "title": "Time buckets for charts",
-      "description": "Split a time range into minute, hour, day, week, month, quarter or year buckets with exact start and end times in a time zone. DST-aware (23- and 25-hour days, repeated and skipped hours), ISO or Sunday/Saturday weeks, fiscal quarters, partial first and last buckets flagged or clipped. Up to 1,000 buckets. Use for chart axes, time-series grouping and filling empty periods in dashboards. First 25 calls per day are free, then $0.001 per call (x402).",
+      "description": "Split a time range into minute, hour, day, week, month, quarter or year buckets with exact start and end times in a time zone. DST-aware (23- and 25-hour days, repeated and skipped hours), ISO or Sunday/Saturday weeks, fiscal quarters, partial first and last buckets flagged or clipped. Up to 1,000 buckets (500 for weeks and longer). Use for chart axes, time-series grouping and filling empty periods in dashboards. First 25 calls per day are free, then $0.001 per call (x402).",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -3312,7 +3315,7 @@
         "properties": {
           "from": {
             "type": "string",
-            "description": "Range start: YYYY-MM-DD (local midnight), local YYYY-MM-DDTHH:MM, or ISO 8601 with offset"
+            "description": "Range start: YYYY-MM-DD (local midnight), local YYYY-MM-DDTHH:MM, or ISO 8601 with offset. Years 1000–9999"
           },
           "to": {
             "type": "string",
