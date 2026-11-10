@@ -3023,7 +3023,7 @@
     {
       "name": "business_day_schedule",
       "title": "Business-day job schedule",
-      "description": "Schedules that understand business days and public holidays, which cron cannot express: \"3rd business day of the month at 09:00\", \"last business day\", \"every Monday, or the next business day if it is a holiday\", \"the 25th, modified following\", or any cron expression with a holiday rule. Returns the next run times and whether the job should run on a given date (today by default). Country holidays, custom holidays and workweeks, DST-aware. Use for payroll, billing, reporting and batch jobs. First 25 calls per day are free, then $0.001 per call (x402).",
+      "description": "Job schedules that skip weekends and public holidays, which cron cannot express: \"3rd business day of the month at 09:00\", \"last business day\", \"every Monday, or the next business day if it is a holiday\", or any cron with a holiday rule. Returns the next runs and whether it runs today. DST-aware. Use for payroll, billing, reports and batch jobs. First 25 calls per day are free, then $0.001 per call (x402).",
       "inputSchema": {
         "type": "object",
         "required": [
@@ -3038,13 +3038,13 @@
               "weekly",
               "cron"
             ],
-            "description": "nth_business_day needs n; day_of_month needs day; weekly needs weekdays; cron needs expression"
+            "description": "nth_business_day needs n, day_of_month needs day, weekly needs weekdays, cron needs expression"
           },
           "n": {
             "type": "integer",
             "minimum": -23,
             "maximum": 23,
-            "description": "nth_business_day: 1 = first business day of the month, 3 = third; -1 = last, -2 = second to last. Not 0"
+            "description": "1 = first business day of the month, -1 = last, -2 = second to last"
           },
           "day": {
             "oneOf": [
@@ -3060,7 +3060,7 @@
                 ]
               }
             ],
-            "description": "day_of_month: 1–31 (31 means the last day in shorter months) or \"last\""
+            "description": "1–31 (31 = month end in short months) or \"last\""
           },
           "weekdays": {
             "type": "array",
@@ -3071,21 +3071,20 @@
               "minimum": 0,
               "maximum": 6
             },
-            "description": "weekly: weekday numbers, 0 = Sunday, e.g. [1] for every Monday"
+            "description": "0 = Sunday, e.g. [1] for Mondays"
           },
           "expression": {
             "type": "string",
-            "description": "cron: 5 or 6 field cron expression, e.g. \"0 9 25 * *\". At most 96 runs a day",
-            "example": "0 9 25 * *"
+            "description": "Cron, 5 or 6 fields, max 96 runs a day"
           },
           "time": {
             "type": "string",
             "default": "09:00",
-            "description": "Local run time HH:MM for nth_business_day, day_of_month and weekly (cron uses its own times)"
+            "description": "Local HH:MM (not for cron)"
           },
           "timezone": {
             "type": "string",
-            "description": "IANA time zone, e.g. America/New_York (default UTC)"
+            "description": "IANA zone (default UTC)"
           },
           "adjust": {
             "type": "string",
@@ -3099,7 +3098,7 @@
               "none"
             ],
             "default": "next",
-            "description": "When a scheduled date is a weekend or holiday: move to the next/previous business day; modified_following = next unless that crosses into the next month, then previous; nearest (ties go earlier); skip the run; or none. Not used by nth_business_day"
+            "description": "For weekend/holiday dates. modified_following: next, unless that is next month, then previous"
           },
           "months": {
             "type": "array",
@@ -3110,18 +3109,18 @@
               "minimum": 1,
               "maximum": 12
             },
-            "description": "Only these months, e.g. [1,4,7,10] for quarterly"
+            "description": "Only these months, e.g. [1,4,7,10]"
           },
           "from": {
             "type": "string",
-            "description": "Runs at or after this time: YYYY-MM-DD (local midnight), local YYYY-MM-DDTHH:MM, or ISO 8601 with offset. Default: now"
+            "description": "Runs at or after: date, local datetime or ISO 8601. Default now"
           },
           "count": {
             "type": "integer",
             "minimum": 1,
             "maximum": 50,
             "default": 5,
-            "description": "How many runs to return (searches up to 10 years ahead)"
+            "description": "Runs to return"
           },
           "check_date": {
             "type": "string",
@@ -3181,8 +3180,7 @@
             "type": "string"
           },
           "description": {
-            "type": "string",
-            "description": "The schedule in plain English"
+            "type": "string"
           },
           "timezone": {
             "type": "string"
@@ -3211,12 +3209,10 @@
               ],
               "properties": {
                 "date": {
-                  "type": "string",
-                  "description": "Run date (after adjustment)"
+                  "type": "string"
                 },
                 "datetime": {
-                  "type": "string",
-                  "description": "Local run time, ISO 8601 with offset"
+                  "type": "string"
                 },
                 "utc": {
                   "type": "string"
@@ -3225,8 +3221,7 @@
                   "type": "string"
                 },
                 "scheduled_date": {
-                  "type": "string",
-                  "description": "The date the rule produced before the weekend/holiday adjustment"
+                  "type": "string"
                 },
                 "adjusted": {
                   "type": "boolean"
@@ -3235,8 +3230,7 @@
                   "type": "boolean"
                 },
                 "reason": {
-                  "type": "string",
-                  "description": "Why the scheduled date was moved: weekend, or holiday: <name>"
+                  "type": "string"
                 }
               }
             }
@@ -3265,12 +3259,10 @@
                 "type": [
                   "string",
                   "null"
-                ],
-                "description": "weekend, holiday: <name>, or null on a business day"
+                ]
               },
               "runs": {
-                "type": "boolean",
-                "description": "Whether the job runs on this date"
+                "type": "boolean"
               },
               "run_times": {
                 "type": "array",
@@ -3295,8 +3287,7 @@
                 }
               },
               "scheduled_run_moved_to": {
-                "type": "string",
-                "description": "When a run was scheduled on this date but moved: its new date, or \"skipped\""
+                "type": "string"
               }
             }
           }
