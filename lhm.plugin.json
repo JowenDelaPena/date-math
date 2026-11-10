@@ -1,7 +1,7 @@
 {
   "identifier": "jowendelapena-date-math",
   "name": "Date Math",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Exact date and time math for AI agents: business days, public holidays for 207 countries, time zones, DST, SLA deadlines, cron and RRULE schedules, and stock-market calendars. 25 free calls a day, then $0.001 per call via x402.",
   "author": "JowenDelaPena",
   "homepage": "https://date-math.datemath.workers.dev",
@@ -2843,6 +2843,621 @@
         "readOnlyHint": true,
         "idempotentHint": true,
         "openWorldHint": false
+      }
+    },
+    {
+      "name": "date_range",
+      "title": "Reporting period to exact dates",
+      "description": "Turn a reporting period into exact start and end dates and times in a time zone: \"last month\", \"this quarter\", \"YTD\", \"MTD\", \"last 7 days\", \"next 2 weeks\", \"2026-Q3\", \"2026-W14\". Optional comparison period (previous period, or same period last year), fiscal years starting in any month, and Monday, Sunday or Saturday week starts. Use for analytics queries, SQL date filters, reports and dashboards. First 25 calls per day are free, then $0.001 per call (x402).",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "period"
+        ],
+        "properties": {
+          "period": {
+            "type": "string",
+            "description": "Relative: today, yesterday, tomorrow, this_/last_/next_ + week|month|quarter|half|year, week_to_date|month_to_date|quarter_to_date|year_to_date (or wtd, mtd, qtd, ytd), last_N_days|weeks|months|quarters|years, next_N_days|weeks|months|... Spaces work too (\"last 7 days\"). last_N_days = N complete days before today; last_N_months = N complete calendar months before this one. Explicit: 2026, 2026-H1, 2026-Q3 or \"Q3 2026\", 2026-03, 2026-W14 (ISO week), 2026-03-15",
+            "example": "last_month"
+          },
+          "timezone": {
+            "type": "string",
+            "description": "IANA time zone, e.g. America/New_York (default UTC)"
+          },
+          "as_of": {
+            "type": "string",
+            "description": "Reference date for relative periods: YYYY-MM-DD, or a datetime (its local date is used). Default: today in timezone"
+          },
+          "week_start": {
+            "type": "string",
+            "enum": [
+              "monday",
+              "sunday",
+              "saturday"
+            ],
+            "default": "monday",
+            "description": "First day of the week. monday = ISO weeks (labels like 2026-W46)"
+          },
+          "fiscal_year_start": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12,
+            "default": 1,
+            "description": "Month the fiscal year starts (1 = January). Quarters, halves and years follow it; fiscal years are named by the calendar year they end in (start 7: FY2027 = July 2026 – June 2027)"
+          },
+          "include_today": {
+            "type": "boolean",
+            "description": "End the range with today (inclusive). Default true for *_to_date periods, false for last_N_* periods (complete days only)"
+          },
+          "compare": {
+            "type": "string",
+            "enum": [
+              "previous_period",
+              "previous_year"
+            ],
+            "description": "Also return a comparison range. previous_period: the same length immediately before (to-date periods: the same number of days into the previous unit). previous_year: the same dates a year earlier (weeks: 52 weeks earlier, same weekdays)"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "period",
+          "timezone",
+          "as_of",
+          "label",
+          "start_date",
+          "end_date",
+          "days",
+          "start",
+          "end_exclusive",
+          "start_utc",
+          "end_exclusive_utc"
+        ],
+        "properties": {
+          "period": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "as_of": {
+            "type": "string",
+            "description": "The local date that relative periods were resolved against"
+          },
+          "label": {
+            "type": "string",
+            "description": "e.g. \"October 2026\", \"Q3 2026\", \"2026-W46\", \"FY2027\", or \"start to end\""
+          },
+          "start_date": {
+            "type": "string",
+            "description": "First day (YYYY-MM-DD)"
+          },
+          "end_date": {
+            "type": "string",
+            "description": "Last day, inclusive (YYYY-MM-DD)"
+          },
+          "days": {
+            "type": "integer"
+          },
+          "start": {
+            "type": "string",
+            "description": "Local start, ISO 8601 with offset (local midnight)"
+          },
+          "end_exclusive": {
+            "type": "string",
+            "description": "Local end, exclusive: the midnight after end_date. Filter with >= start and < end_exclusive"
+          },
+          "start_utc": {
+            "type": "string"
+          },
+          "end_exclusive_utc": {
+            "type": "string"
+          },
+          "week_start": {
+            "type": "string"
+          },
+          "fiscal_year_start": {
+            "type": "string",
+            "description": "Month name, when not January"
+          },
+          "comparison": {
+            "type": "object",
+            "required": [
+              "type",
+              "method",
+              "label",
+              "start_date",
+              "end_date",
+              "days",
+              "start",
+              "end_exclusive",
+              "start_utc",
+              "end_exclusive_utc"
+            ],
+            "properties": {
+              "type": {
+                "type": "string"
+              },
+              "method": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "start_date": {
+                "type": "string",
+                "description": "First day (YYYY-MM-DD)"
+              },
+              "end_date": {
+                "type": "string",
+                "description": "Last day, inclusive (YYYY-MM-DD)"
+              },
+              "days": {
+                "type": "integer"
+              },
+              "start": {
+                "type": "string",
+                "description": "Local start, ISO 8601 with offset (local midnight)"
+              },
+              "end_exclusive": {
+                "type": "string",
+                "description": "Local end, exclusive: the midnight after end_date. Filter with >= start and < end_exclusive"
+              },
+              "start_utc": {
+                "type": "string"
+              },
+              "end_exclusive_utc": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "idempotentHint": true
+      }
+    },
+    {
+      "name": "business_day_schedule",
+      "title": "Business-day job schedule",
+      "description": "Schedules that understand business days and public holidays, which cron cannot express: \"3rd business day of the month at 09:00\", \"last business day\", \"every Monday, or the next business day if it is a holiday\", \"the 25th, modified following\", or any cron expression with a holiday rule. Returns the next run times and whether the job should run on a given date (today by default). Country holidays, custom holidays and workweeks, DST-aware. Use for payroll, billing, reporting and batch jobs. First 25 calls per day are free, then $0.001 per call (x402).",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "rule"
+        ],
+        "properties": {
+          "rule": {
+            "type": "string",
+            "enum": [
+              "nth_business_day",
+              "day_of_month",
+              "weekly",
+              "cron"
+            ],
+            "description": "nth_business_day needs n; day_of_month needs day; weekly needs weekdays; cron needs expression"
+          },
+          "n": {
+            "type": "integer",
+            "minimum": -23,
+            "maximum": 23,
+            "description": "nth_business_day: 1 = first business day of the month, 3 = third; -1 = last, -2 = second to last. Not 0"
+          },
+          "day": {
+            "oneOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 31
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "last"
+                ]
+              }
+            ],
+            "description": "day_of_month: 1–31 (31 means the last day in shorter months) or \"last\""
+          },
+          "weekdays": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 7,
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            },
+            "description": "weekly: weekday numbers, 0 = Sunday, e.g. [1] for every Monday"
+          },
+          "expression": {
+            "type": "string",
+            "description": "cron: 5 or 6 field cron expression, e.g. \"0 9 25 * *\". At most 96 runs a day",
+            "example": "0 9 25 * *"
+          },
+          "time": {
+            "type": "string",
+            "default": "09:00",
+            "description": "Local run time HH:MM for nth_business_day, day_of_month and weekly (cron uses its own times)"
+          },
+          "timezone": {
+            "type": "string",
+            "description": "IANA time zone, e.g. America/New_York (default UTC)"
+          },
+          "adjust": {
+            "type": "string",
+            "enum": [
+              "next",
+              "previous",
+              "modified_following",
+              "modified_preceding",
+              "nearest",
+              "skip",
+              "none"
+            ],
+            "default": "next",
+            "description": "When a scheduled date is a weekend or holiday: move to the next/previous business day; modified_following = next unless that crosses into the next month, then previous; nearest (ties go earlier); skip the run; or none. Not used by nth_business_day"
+          },
+          "months": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 12,
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            },
+            "description": "Only these months, e.g. [1,4,7,10] for quarterly"
+          },
+          "from": {
+            "type": "string",
+            "description": "Runs at or after this time: YYYY-MM-DD (local midnight), local YYYY-MM-DDTHH:MM, or ISO 8601 with offset. Default: now"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "default": 5,
+            "description": "How many runs to return (searches up to 10 years ahead)"
+          },
+          "check_date": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "example": "2026-11-07"
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}$",
+            "description": "ISO 3166-1 alpha-2 country code (207 countries); its public holidays (2000–2050) are excluded from business days",
+            "example": "US"
+          },
+          "holidays": {
+            "type": "array",
+            "maxItems": 1000,
+            "items": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-11-07"
+            },
+            "description": "Extra dates excluded from business-day counts (rest days from workdays are always excluded)"
+          },
+          "workdays": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 7,
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            },
+            "description": "Working days of the week, 0 = Sunday. Default [1,2,3,4,5] (Mon–Fri); e.g. [0,1,2,3,4] for Sun–Thu or [1,2,3,4,5,6] for Mon–Sat",
+            "example": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "rule",
+          "description",
+          "timezone",
+          "adjust",
+          "from",
+          "count",
+          "runs",
+          "check"
+        ],
+        "properties": {
+          "rule": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "description": "The schedule in plain English"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "adjust": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "runs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "date",
+                "datetime",
+                "utc",
+                "weekday",
+                "scheduled_date",
+                "adjusted",
+                "is_business_day"
+              ],
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "description": "Run date (after adjustment)"
+                },
+                "datetime": {
+                  "type": "string",
+                  "description": "Local run time, ISO 8601 with offset"
+                },
+                "utc": {
+                  "type": "string"
+                },
+                "weekday": {
+                  "type": "string"
+                },
+                "scheduled_date": {
+                  "type": "string",
+                  "description": "The date the rule produced before the weekend/holiday adjustment"
+                },
+                "adjusted": {
+                  "type": "boolean"
+                },
+                "is_business_day": {
+                  "type": "boolean"
+                },
+                "reason": {
+                  "type": "string",
+                  "description": "Why the scheduled date was moved: weekend, or holiday: <name>"
+                }
+              }
+            }
+          },
+          "check": {
+            "type": "object",
+            "required": [
+              "date",
+              "weekday",
+              "is_business_day",
+              "reason",
+              "runs",
+              "run_times"
+            ],
+            "properties": {
+              "date": {
+                "type": "string"
+              },
+              "weekday": {
+                "type": "string"
+              },
+              "is_business_day": {
+                "type": "boolean"
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "weekend, holiday: <name>, or null on a business day"
+              },
+              "runs": {
+                "type": "boolean",
+                "description": "Whether the job runs on this date"
+              },
+              "run_times": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "datetime",
+                    "utc",
+                    "scheduled_date"
+                  ],
+                  "properties": {
+                    "datetime": {
+                      "type": "string"
+                    },
+                    "utc": {
+                      "type": "string"
+                    },
+                    "scheduled_date": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "scheduled_run_moved_to": {
+                "type": "string",
+                "description": "When a run was scheduled on this date but moved: its new date, or \"skipped\""
+              }
+            }
+          }
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "idempotentHint": true
+      }
+    },
+    {
+      "name": "time_buckets",
+      "title": "Time buckets for charts",
+      "description": "Split a time range into minute, hour, day, week, month, quarter or year buckets with exact start and end times in a time zone. DST-aware (23- and 25-hour days, repeated and skipped hours), ISO or Sunday/Saturday weeks, fiscal quarters, partial first and last buckets flagged or clipped. Up to 1,000 buckets. Use for chart axes, time-series grouping and filling empty periods in dashboards. First 25 calls per day are free, then $0.001 per call (x402).",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "from",
+          "to"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "Range start: YYYY-MM-DD (local midnight), local YYYY-MM-DDTHH:MM, or ISO 8601 with offset"
+          },
+          "to": {
+            "type": "string",
+            "description": "Range end, exclusive (same formats)"
+          },
+          "bucket": {
+            "type": "string",
+            "enum": [
+              "minute",
+              "hour",
+              "day",
+              "week",
+              "month",
+              "quarter",
+              "year"
+            ],
+            "default": "day"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30,
+            "default": 1,
+            "description": "minute: 1,2,3,4,5,6,10,12,15,20,30; hour: 1,2,3,4,6,8,12. Other buckets: 1"
+          },
+          "timezone": {
+            "type": "string",
+            "description": "IANA time zone, e.g. America/New_York (default UTC)"
+          },
+          "week_start": {
+            "type": "string",
+            "enum": [
+              "monday",
+              "sunday",
+              "saturday"
+            ],
+            "default": "monday",
+            "description": "First day of the week. monday = ISO weeks (labels like 2026-W46)"
+          },
+          "fiscal_year_start": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12,
+            "default": 1,
+            "description": "Month the fiscal year starts (1 = January). Quarters, halves and years follow it; fiscal years are named by the calendar year they end in (start 7: FY2027 = July 2026 – June 2027)"
+          },
+          "clip": {
+            "type": "boolean",
+            "default": false,
+            "description": "Clip the first and last buckets to [from, to) instead of returning whole buckets flagged partial"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "timezone",
+          "bucket",
+          "size",
+          "from",
+          "to",
+          "count",
+          "buckets"
+        ],
+        "properties": {
+          "timezone": {
+            "type": "string"
+          },
+          "bucket": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "week_start": {
+            "type": "string"
+          },
+          "fiscal_year_start": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "buckets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "label",
+                "start",
+                "end",
+                "start_utc",
+                "end_utc",
+                "hours"
+              ],
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "description": "2026-11-01, 2026-W45, 2026-11, 2026-Q4, FY2027-Q2, 2026, or a local time like 2026-11-01T01:00-05:00"
+                },
+                "start": {
+                  "type": "string"
+                },
+                "end": {
+                  "type": "string",
+                  "description": "Exclusive"
+                },
+                "start_utc": {
+                  "type": "string"
+                },
+                "end_utc": {
+                  "type": "string"
+                },
+                "hours": {
+                  "type": "number",
+                  "description": "Real length: 23 or 25 on clock-change days"
+                },
+                "partial": {
+                  "type": "boolean",
+                  "description": "The bucket extends beyond [from, to)"
+                }
+              }
+            }
+          }
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "idempotentHint": true
       }
     },
     {
