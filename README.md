@@ -42,6 +42,9 @@ Each tool name links to its own page with a full description, an example and a l
 | `/v1/free_slots` | [`find_free_slots`](https://date-math.datemath.workers.dev/tools/find-free-slots) | Meeting slots when everyone is free: each person's working hours in their own zone (and holidays) minus their busy blocks |
 | `/v1/subscription` | [`subscription_dates`](https://date-math.datemath.workers.dev/tools/subscription-dates) | Billing period, next renewal, cancel-by date for a notice period, trial start and day-based proration; month-end anchors stay at month end |
 | `/v1/market` | [`market_calendar`](https://date-math.datemath.workers.dev/tools/market-calendar) | NYSE/Nasdaq, London and Tokyo: open now, session hours (early closes, lunch break), holidays, next open/close, settlement date (T+1/T+2) |
+| `/v1/date_range` | [`date_range`](https://date-math.datemath.workers.dev/tools/date-range) | "last month", "this quarter", "YTD", "last 7 days", "2026-Q3" → exact start and end dates and times in a time zone, with an optional comparison period (previous period or same period last year) and fiscal years |
+| `/v1/business_day_schedule` | [`business_day_schedule`](https://date-math.datemath.workers.dev/tools/business-day-schedule) | Holiday-aware job schedules cron can't express: "3rd business day at 09:00", "last business day", "every Monday or the next business day", any cron with a holiday rule. Next runs plus "does it run today?" |
+| `/v1/time_buckets` | [`time_buckets`](https://date-math.datemath.workers.dev/tools/time-buckets) | Hour, day, week, month, quarter or year buckets for charts and time series, DST-aware (23- and 25-hour days), ISO or Sunday weeks, fiscal quarters |
 | `GET /v1/now` | `current_time` | **Free:** the current date and time in up to 10 time zones. No payment, and it doesn't use the daily free calls |
 
 ## Use it in your app

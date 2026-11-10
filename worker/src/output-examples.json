@@ -99,12 +99,12 @@
     "expression": "0 9 * * 1-5",
     "timezone": "Asia/Manila",
     "description": "At 09:00, Monday through Friday",
-    "from": "2026-11-08T01:55:08.825Z",
+    "from": "2026-11-10T13:23:34.584Z",
     "next_runs": [
       {
-        "utc": "2026-11-09T01:00:00Z",
-        "local": "2026-11-09T09:00:00+08:00",
-        "weekday": "Monday"
+        "utc": "2026-11-11T01:00:00Z",
+        "local": "2026-11-11T09:00:00+08:00",
+        "weekday": "Wednesday"
       }
     ]
   },
@@ -130,7 +130,7 @@
     ]
   },
   "/v1/city": {
-    "at": "2026-11-08T01:55:09.445Z",
+    "at": "2026-11-10T13:23:34.870Z",
     "results": [
       {
         "query": "Cebu",
@@ -142,8 +142,8 @@
           "timezone": "Asia/Manila",
           "population": 806817,
           "match": "exact",
-          "local_time": "2026-11-08T09:55:09+08:00",
-          "weekday": "Sunday",
+          "local_time": "2026-11-10T21:23:34+08:00",
+          "weekday": "Tuesday",
           "utc_offset": "+08:00"
         },
         "alternatives": []
@@ -379,5 +379,75 @@
     },
     "calendar": null,
     "note": "Regular sessions only (no pre/after-hours). Unscheduled closures (e.g. national mourning days) are added when announced."
+  },
+  "/v1/date_range": {
+    "period": "last_month",
+    "timezone": "America/New_York",
+    "as_of": "2026-11-10",
+    "label": "October 2026",
+    "start_date": "2026-10-01",
+    "end_date": "2026-10-31",
+    "days": 31,
+    "start": "2026-10-01T00:00:00-04:00",
+    "end_exclusive": "2026-11-01T00:00:00-04:00",
+    "start_utc": "2026-10-01T04:00:00Z",
+    "end_exclusive_utc": "2026-11-01T04:00:00Z",
+    "comparison": {
+      "type": "previous_year",
+      "method": "same dates one year earlier",
+      "label": "October 2025",
+      "start_date": "2025-10-01",
+      "end_date": "2025-10-31",
+      "days": 31,
+      "start": "2025-10-01T00:00:00-04:00",
+      "end_exclusive": "2025-11-01T00:00:00-04:00",
+      "start_utc": "2025-10-01T04:00:00Z",
+      "end_exclusive_utc": "2025-11-01T04:00:00Z"
+    }
+  },
+  "/v1/business_day_schedule": {
+    "rule": "nth_business_day",
+    "description": "3rd business day of every month at 09:00 (Europe/London); holidays: GB public holidays",
+    "timezone": "Europe/London",
+    "adjust": "none",
+    "from": "2026-11-10T00:00:00+00:00",
+    "count": 3,
+    "runs": [
+      {
+        "date": "2026-12-03",
+        "datetime": "2026-12-03T09:00:00+00:00",
+        "utc": "2026-12-03T09:00:00Z",
+        "weekday": "Thursday",
+        "scheduled_date": "2026-12-03",
+        "adjusted": false,
+        "is_business_day": true
+      }
+    ],
+    "check": {
+      "date": "2026-11-10",
+      "weekday": "Tuesday",
+      "is_business_day": true,
+      "reason": null,
+      "runs": false,
+      "run_times": []
+    }
+  },
+  "/v1/time_buckets": {
+    "timezone": "America/New_York",
+    "bucket": "day",
+    "size": 1,
+    "from": "2026-10-31T00:00:00-04:00",
+    "to": "2026-11-03T00:00:00-05:00",
+    "count": 3,
+    "buckets": [
+      {
+        "label": "2026-10-31",
+        "start": "2026-10-31T00:00:00-04:00",
+        "end": "2026-11-01T00:00:00-04:00",
+        "start_utc": "2026-10-31T04:00:00Z",
+        "end_utc": "2026-11-01T04:00:00Z",
+        "hours": 24
+      }
+    ]
   }
 }

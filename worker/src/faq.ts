@@ -318,4 +318,55 @@ export const FAQS: Record<string, Faq[]> = {
       check: { args: { exchange: "LSE", date: "2026-12-24" }, path: "settlement.settlement_date", equals: "2026-12-30" },
     },
   ],
+  date_range: [
+    {
+      q: "How do I get the exact start and end of last month in my time zone?",
+      a: "Send period last_month and a time zone. Asked on 2026-11-10 in America/New_York, it returns 2026-10-01T00:00:00-04:00 to 2026-11-01T00:00:00-04:00 (end exclusive), which is 2026-10-01T04:00:00Z in UTC. Filter with >= start and < end_exclusive so the last day is fully included.",
+      check: { args: { period: "last_month", timezone: "America/New_York", as_of: "2026-11-10" }, path: "start_utc", equals: "2026-10-01T04:00:00Z" },
+    },
+    {
+      q: "Does \"last 7 days\" include today?",
+      a: "Not by default: it is the 7 complete days before today, so on 2026-11-10 it covers 2026-11-03 to 2026-11-09. Pass include_today: true to end the range today instead. Month-to-date and year-to-date include today by default.",
+      check: { args: { period: "last 7 days", as_of: "2026-11-10" }, path: "start_date", equals: "2026-11-03" },
+    },
+    {
+      q: "Can it use a fiscal year that does not start in January?",
+      a: "Yes. Pass fiscal_year_start as a month number. With a July fiscal year, \"this quarter\" on 2026-11-10 is Q2 FY2027 (October to December 2026); fiscal years are named by the calendar year they end in.",
+      check: { args: { period: "this_quarter", as_of: "2026-11-10", fiscal_year_start: 7 }, path: "label", equals: "Q2 FY2027" },
+    },
+  ],
+  business_day_schedule: [
+    {
+      q: "How do I run a job on the 3rd business day of every month?",
+      a: "Use rule nth_business_day with n: 3, a time, a time zone and a country. Weekends and that country's public holidays are skipped when counting. In the UK in January 2027 the 3rd business day is 2027-01-06, because New Year's Day and the weekend do not count.",
+      check: { args: { rule: "nth_business_day", n: 3, country: "GB", from: "2027-01-01", count: 1 }, path: "runs.0.date", equals: "2027-01-06" },
+    },
+    {
+      q: "How do I run a job every Monday, or the next business day when Monday is a holiday?",
+      a: "Use rule weekly with weekdays [1] and adjust next (the default). In the UK, Monday 2026-12-28 is the Boxing Day substitute holiday, so that week's run moves to Tuesday 2026-12-29.",
+      check: { args: { rule: "weekly", weekdays: [1], country: "GB", from: "2026-12-27", count: 1 }, path: "runs.0.date", equals: "2026-12-29" },
+    },
+    {
+      q: "How does a job know whether it should run today?",
+      a: "Every result includes check: whether the schedule runs on check_date (today by default), at what times, and, if a run was scheduled that day but moved, where it moved to. For the last business day of the month in the US, 2026-12-31 is a run day.",
+      check: { args: { rule: "nth_business_day", n: -1, country: "US", from: "2026-12-01", check_date: "2026-12-31" }, path: "check.runs", equals: true },
+    },
+  ],
+  time_buckets: [
+    {
+      q: "Why does one day in my chart have 25 hours?",
+      a: "Days are local calendar days, so the day clocks go back has 25 hours and the day they go forward has 23. In New York, 2026-11-01 is a 25-hour day. Each bucket reports its real length in hours so rates and averages stay correct.",
+      check: { args: { from: "2026-10-31", to: "2026-11-03", bucket: "day", timezone: "America/New_York" }, path: "buckets.1.hours", equals: 25 },
+    },
+    {
+      q: "Can I group by fiscal quarter?",
+      a: "Yes. Use bucket quarter with fiscal_year_start. With a July fiscal year, January to March 2026 is labelled FY2026-Q3.",
+      check: { args: { from: "2026-01-01", to: "2027-01-01", bucket: "quarter", fiscal_year_start: 7 }, path: "buckets.0.label", equals: "FY2026-Q3" },
+    },
+    {
+      q: "What happens to a partial first or last week?",
+      a: "By default buckets are whole calendar units, and any that extend past the range are flagged partial: true. Pass clip: true to cut the first and last buckets to the exact range instead.",
+      check: { args: { from: "2026-11-10", to: "2026-12-01", bucket: "week" }, path: "buckets.0.partial", equals: true },
+    },
+  ],
 };

@@ -81,7 +81,7 @@ export function parseCron(expression: string): CronSchedule {
   };
 }
 
-function dayMatches(s: CronSchedule, y: number, mo: number, d: number): boolean {
+export function dayMatches(s: CronSchedule, y: number, mo: number, d: number): boolean {
   if (!s.months.has(mo)) return false;
   const wd = new Date(Date.UTC(y, mo - 1, d)).getUTCDay();
   const domOk = s.dom.has(d), dowOk = s.dow.has(wd);

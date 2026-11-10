@@ -28,6 +28,9 @@ export const HEADINGS: Record<string, string> = {
   stay_calculator: "Schengen 90/180 stay calculator",
   subscription_dates: "Subscription renewal and proration dates",
   market_calendar: "Stock market hours, holidays and early closes",
+  date_range: "Last month, this quarter or YTD as exact dates",
+  business_day_schedule: "Schedules on the nth or last business day",
+  time_buckets: "Time buckets for charts and time series",
 };
 
 const PAGE_CSS = `

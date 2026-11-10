@@ -30,7 +30,7 @@ describe("MCP (payments off)", () => {
     expect(init.result.serverInfo.name).toBe("date-math");
     const list = await rpc("tools/list", {});
     expect(list.result.tools.map((t: any) => t.name)).toEqual([
-      "date_diff", "date_add", "timezone_convert", "date_info", "public_holidays", "working_hours_overlap", "cron_schedule", "parse_date_text", "city_time", "recurring_dates", "business_hours_deadline", "business_day", "pay_dates", "stay_calculator", "timestamp_normalize", "dst_check", "sla_countdown", "find_free_slots", "subscription_dates", "market_calendar", "current_time",
+      "date_diff", "date_add", "timezone_convert", "date_info", "public_holidays", "working_hours_overlap", "cron_schedule", "parse_date_text", "city_time", "recurring_dates", "business_hours_deadline", "business_day", "pay_dates", "stay_calculator", "timestamp_normalize", "dst_check", "sla_countdown", "find_free_slots", "subscription_dates", "market_calendar", "date_range", "business_day_schedule", "time_buckets", "current_time",
     ]);
     for (const t of list.result.tools) {
       expect(t.inputSchema.type).toBe("object");

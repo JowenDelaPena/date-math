@@ -80,7 +80,7 @@ describe("discovery", () => {
   it("serves /.well-known/x402, /llms.txt and an OpenAPI with x-payment-info", async () => {
     const wk = await (await call("/.well-known/x402")).json();
     expect(wk.version).toBe(1);
-    expect(wk.resources).toHaveLength(20);
+    expect(wk.resources).toHaveLength(23);
     expect((await call("/llms.txt")).status).toBe(200);
     const spec = await (await call("/openapi.json")).json();
     expect(spec.info["x-guidance"]).toContain("POST /v1/diff");

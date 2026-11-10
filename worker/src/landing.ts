@@ -35,13 +35,17 @@ export const SHORT: Record<string, string> = {
   stay_calculator: "Schengen 90/180 days used, left and next full stay",
   subscription_dates: "Renewals, cancel-by dates and proration",
   market_calendar: "NYSE, London and Tokyo hours, holidays, settlement",
+  date_range: "“Last month”, “this quarter”, “YTD” to exact dates and times",
+  business_day_schedule: "“3rd business day at 09:00” and other holiday-aware schedules",
+  time_buckets: "Hour, day, week or month buckets for charts, DST-aware",
 };
 
 export const GROUPS: [string, string[]][] = [
   ["Calendar", ["date_diff", "date_add", "date_info", "parse_date_text"]],
-  ["Business days", ["business_day", "public_holidays", "pay_dates", "business_hours_deadline", "sla_countdown"]],
+  ["Business days", ["business_day", "public_holidays", "pay_dates", "business_day_schedule", "business_hours_deadline", "sla_countdown"]],
   ["Time zones", ["timezone_convert", "city_time", "working_hours_overlap", "find_free_slots", "dst_check"]],
   ["Schedules", ["cron_schedule", "recurring_dates", "timestamp_normalize"]],
+  ["Reporting", ["date_range", "time_buckets"]],
   ["Domain", ["stay_calculator", "subscription_dates", "market_calendar"]],
 ];
 
@@ -243,7 +247,7 @@ export function landingHtml(origin: string, version: string): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Date Math</title>
-<meta name="description" content="Exact date and time math for AI agents: business days, holidays, time zones, SLAs, cron and more. 20 deterministic tools over MCP and HTTP. 25 free calls a day.">
+<meta name="description" content="Exact date and time math for AI agents: business days, holidays, time zones, SLAs, cron and more. 23 deterministic tools over MCP and HTTP. 25 free calls a day.">
 ${headLinks(origin)}<style>
 ${CSS}</style>
 </head>

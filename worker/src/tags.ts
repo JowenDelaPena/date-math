@@ -22,4 +22,7 @@ export const SEARCH_TAGS: Record<string, string[]> = {
   find_free_slots: ["free time slots", "meeting scheduler", "calendar availability", "find meeting time", "open slots"],
   subscription_dates: ["subscription billing dates", "renewal date", "billing cycle", "trial end date", "proration"],
   market_calendar: ["market holidays", "stock market hours", "trading calendar", "nyse early close", "settlement date"],
+  date_range: ["last month dates", "date range", "year to date", "reporting period", "fiscal quarter"],
+  business_day_schedule: ["last business day of month", "nth business day", "business day cron", "holiday aware schedule", "modified following"],
+  time_buckets: ["time buckets", "date histogram", "time series intervals", "chart time axis", "group by week"],
 };

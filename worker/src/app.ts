@@ -10,7 +10,7 @@ import { FREE_TOOLS, TOOLS } from "./tools";
 
 // The free API (no payments). index.ts wraps it with x402 for direct paid access and adds /mcp.
 export const SERVICE = "date-math";
-export const VERSION = "1.7.0";
+export const VERSION = "1.8.0";
 export const ORIGIN = "https://date-math.datemath.workers.dev";
 const specBody = JSON.stringify(spec);
 

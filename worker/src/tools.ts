@@ -5,6 +5,7 @@ import { businessHours, cityTime, recurrence } from "./more2";
 import { businessDay, payDates } from "./biz";
 import { dst, stay, timestamp } from "./more3";
 import { currentTime, freeSlots, marketCalendar, slaCountdown, subscriptionDates } from "./more4";
+import { businessDaySchedule, dateRange, timeBuckets } from "./more5";
 
 export interface Tool {
   name: string; // MCP tool name
@@ -203,6 +204,33 @@ TOOLS.push(
     run: marketCalendar,
     example: { exchange: "NYSE", date: "2026-11-27", at: "2026-11-27T17:00:00Z" },
   },
+  {
+    name: "date_range",
+    path: "/v1/date_range",
+    title: "Reporting period to exact dates",
+    description:
+      'Turn a reporting period into exact start and end dates and times in a time zone: "last month", "this quarter", "YTD", "MTD", "last 7 days", "next 2 weeks", "2026-Q3", "2026-W14". Optional comparison period (previous period, or same period last year), fiscal years starting in any month, and Monday, Sunday or Saturday week starts. Use for analytics queries, SQL date filters, reports and dashboards.',
+    run: dateRange,
+    example: { period: "last_month", timezone: "America/New_York", as_of: "2026-11-10", compare: "previous_year" },
+  },
+  {
+    name: "business_day_schedule",
+    path: "/v1/business_day_schedule",
+    title: "Business-day job schedule",
+    description:
+      'Schedules that understand business days and public holidays, which cron cannot express: "3rd business day of the month at 09:00", "last business day", "every Monday, or the next business day if it is a holiday", "the 25th, modified following", or any cron expression with a holiday rule. Returns the next run times and whether the job should run on a given date (today by default). Country holidays, custom holidays and workweeks, DST-aware. Use for payroll, billing, reporting and batch jobs.',
+    run: businessDaySchedule,
+    example: { rule: "nth_business_day", n: 3, time: "09:00", timezone: "Europe/London", country: "GB", from: "2026-11-10", count: 3 },
+  },
+  {
+    name: "time_buckets",
+    path: "/v1/time_buckets",
+    title: "Time buckets for charts",
+    description:
+      "Split a time range into minute, hour, day, week, month, quarter or year buckets with exact start and end times in a time zone. DST-aware (23- and 25-hour days, repeated and skipped hours), ISO or Sunday/Saturday weeks, fiscal quarters, partial first and last buckets flagged or clipped. Up to 1,000 buckets. Use for chart axes, time-series grouping and filling empty periods in dashboards.",
+    run: timeBuckets,
+    example: { from: "2026-10-31", to: "2026-11-03", bucket: "day", timezone: "America/New_York" },
+  },
 );
 
 /** Free tools: no payment and no free-tier quota, over MCP (listed with the paid tools) and HTTP GET. */
@@ -254,6 +282,7 @@ const NUMERIC_KEYS = new Set([
   "years", "months", "weeks", "days", "hours", "minutes", "seconds", "business_days", "count", "year", "list_year",
   "max_days", "window_days", "interval_count", "notice_days", "trial_days", "amount",
   "duration_minutes", "step_minutes", "buffer_minutes", "max_slots", "sla_hours", "sla_minutes",
+  "n", "day", "size", "fiscal_year_start",
 ]);
 const NUMBER_TEXT = /^\s*-?\d+(\.\d+)?\s*$/;
 

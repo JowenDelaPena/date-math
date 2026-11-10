@@ -2,9 +2,9 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Date Math",
-    "version": "1.7.0",
+    "version": "1.8.0",
     "description": "Deterministic date and time math for AI agents: date differences, business days, date arithmetic, time zone conversion and calendar facts. Paid per call via x402 (USDC on Base, $0.001); probes and spec are free. All inputs are JSON bodies; all responses are JSON objects. Errors return {\"error\":{\"code\",\"message\",\"example\"}}.",
-    "x-guidance": "Date Math does exact date and time arithmetic so you don't have to. Every tool is POST with a JSON body, returns a JSON object, and costs $0.001 (x402, USDC on Base). POST /v1/diff: days/weeks/months/business days between two dates (pass country, e.g. \"US\", to skip its public holidays). POST /v1/add: the date N days/weeks/months/business days before or after a date. POST /v1/convert: a time in another IANA time zone (DST-aware). POST /v1/info: weekday, ISO week, quarter or leap-year status of a date. POST /v1/holidays: a country's public holidays for a year. POST /v1/overlap: when working hours overlap across time zones (meeting slots). POST /v1/cron: explain a cron expression and list its next runs. POST /v1/parse: turn text like \"next Friday at 3pm\" into an exact datetime. POST /v1/city: the time zone and local time of a city by name. POST /v1/recurrence: concrete dates for an iCal RRULE (\"every 2nd Tuesday\"). POST /v1/business_hours: SLA deadline N working hours from now, or working hours elapsed. POST /v1/business_day: is a date a business day (and if not, which holiday), plus the next/previous business day. POST /v1/pay_dates: payroll or billing dates (monthly, 15th and last, biweekly, weekly) moved off weekends and holidays. POST /v1/stay: Schengen-style 90/180 stay limits (days used, days left, longest stay from an entry date). POST /v1/timestamp: convert mixed Unix/Excel/ISO/slash-date timestamps to UTC and flag ambiguous ones. POST /v1/dst: a zone's DST clock changes and whether a local time is skipped or repeated. POST /v1/sla: support-ticket SLA clock (business minutes elapsed/remaining, breached, deadline; pauses outside hours). POST /v1/free_slots: meeting slots when every participant is free (working hours per zone minus busy blocks). POST /v1/subscription: billing period, next renewal, cancel-by date and proration. POST /v1/market: NYSE/Nasdaq/LSE/Tokyo hours, holidays, open now, settlement date. Free: GET /v1/now returns the current date and time (call it when you need today's date). Business-day tools accept workdays (e.g. [0,1,2,3,4] for Sun–Thu). Dates are YYYY-MM-DD; datetimes are ISO 8601 with Z or an offset; time zones are IANA names. Errors return HTTP 400 with {\"error\":{\"code\",\"message\",\"example\"}}; example is a valid body for that tool. Also available as an MCP server at /mcp.",
+    "x-guidance": "Date Math does exact date and time arithmetic so you don't have to. Every tool is POST with a JSON body, returns a JSON object, and costs $0.001 (x402, USDC on Base). POST /v1/diff: days/weeks/months/business days between two dates (pass country, e.g. \"US\", to skip its public holidays). POST /v1/add: the date N days/weeks/months/business days before or after a date. POST /v1/convert: a time in another IANA time zone (DST-aware). POST /v1/info: weekday, ISO week, quarter or leap-year status of a date. POST /v1/holidays: a country's public holidays for a year. POST /v1/overlap: when working hours overlap across time zones (meeting slots). POST /v1/cron: explain a cron expression and list its next runs. POST /v1/parse: turn text like \"next Friday at 3pm\" into an exact datetime. POST /v1/city: the time zone and local time of a city by name. POST /v1/recurrence: concrete dates for an iCal RRULE (\"every 2nd Tuesday\"). POST /v1/business_hours: SLA deadline N working hours from now, or working hours elapsed. POST /v1/business_day: is a date a business day (and if not, which holiday), plus the next/previous business day. POST /v1/pay_dates: payroll or billing dates (monthly, 15th and last, biweekly, weekly) moved off weekends and holidays. POST /v1/stay: Schengen-style 90/180 stay limits (days used, days left, longest stay from an entry date). POST /v1/timestamp: convert mixed Unix/Excel/ISO/slash-date timestamps to UTC and flag ambiguous ones. POST /v1/dst: a zone's DST clock changes and whether a local time is skipped or repeated. POST /v1/sla: support-ticket SLA clock (business minutes elapsed/remaining, breached, deadline; pauses outside hours). POST /v1/free_slots: meeting slots when every participant is free (working hours per zone minus busy blocks). POST /v1/subscription: billing period, next renewal, cancel-by date and proration. POST /v1/market: NYSE/Nasdaq/LSE/Tokyo hours, holidays, open now, settlement date. POST /v1/date_range: \"last month\", \"this quarter\", \"YTD\", \"last 7 days\" or \"2026-Q3\" as exact start/end dates and times in a time zone, with an optional comparison period. POST /v1/business_day_schedule: next runs of a holiday-aware schedule (\"3rd business day at 09:00\", \"every Monday or the next business day\") and whether it runs today. POST /v1/time_buckets: hour/day/week/month buckets for charts, DST-aware. Free: GET /v1/now returns the current date and time (call it when you need today's date). Business-day tools accept workdays (e.g. [0,1,2,3,4] for Sun–Thu). Dates are YYYY-MM-DD; datetimes are ISO 8601 with Z or an offset; time zones are IANA names. Errors return HTTP 400 with {\"error\":{\"code\",\"message\",\"example\"}}; example is a valid body for that tool. Also available as an MCP server at /mcp.",
     "contact": {
       "email": "jowendelapena2003@gmail.com"
     }
@@ -3510,6 +3510,715 @@
           },
           "400": {
             "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/date_range": {
+      "post": {
+        "operationId": "dateRange",
+        "summary": "Reporting period (last month, this quarter, YTD, last 7 days, 2026-Q3) to exact start and end dates and times",
+        "tags": [
+          "Reporting"
+        ],
+        "x-payment-info": {
+          "price": {
+            "mode": "fixed",
+            "currency": "USD",
+            "amount": "0.001"
+          },
+          "protocols": [
+            {
+              "x402": {}
+            }
+          ]
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "period"
+                ],
+                "properties": {
+                  "period": {
+                    "type": "string",
+                    "description": "Relative: today, yesterday, tomorrow, this_/last_/next_ + week|month|quarter|half|year, week_to_date|month_to_date|quarter_to_date|year_to_date (or wtd, mtd, qtd, ytd), last_N_days|weeks|months|quarters|years, next_N_days|weeks|months|... Spaces work too (\"last 7 days\"). last_N_days = N complete days before today; last_N_months = N complete calendar months before this one. Explicit: 2026, 2026-H1, 2026-Q3 or \"Q3 2026\", 2026-03, 2026-W14 (ISO week), 2026-03-15",
+                    "example": "last_month"
+                  },
+                  "timezone": {
+                    "type": "string",
+                    "description": "IANA time zone, e.g. America/New_York (default UTC)"
+                  },
+                  "as_of": {
+                    "type": "string",
+                    "description": "Reference date for relative periods: YYYY-MM-DD, or a datetime (its local date is used). Default: today in timezone"
+                  },
+                  "week_start": {
+                    "type": "string",
+                    "enum": [
+                      "monday",
+                      "sunday",
+                      "saturday"
+                    ],
+                    "default": "monday",
+                    "description": "First day of the week. monday = ISO weeks (labels like 2026-W46)"
+                  },
+                  "fiscal_year_start": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 12,
+                    "default": 1,
+                    "description": "Month the fiscal year starts (1 = January). Quarters, halves and years follow it; fiscal years are named by the calendar year they end in (start 7: FY2027 = July 2026 – June 2027)"
+                  },
+                  "include_today": {
+                    "type": "boolean",
+                    "description": "End the range with today (inclusive). Default true for *_to_date periods, false for last_N_* periods (complete days only)"
+                  },
+                  "compare": {
+                    "type": "string",
+                    "enum": [
+                      "previous_period",
+                      "previous_year"
+                    ],
+                    "description": "Also return a comparison range. previous_period: the same length immediately before (to-date periods: the same number of days into the previous unit). previous_year: the same dates a year earlier (weeks: 52 weeks earlier, same weekdays)"
+                  }
+                }
+              },
+              "example": {
+                "period": "last_month",
+                "timezone": "America/New_York",
+                "as_of": "2026-11-10",
+                "compare": "previous_year"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "period",
+                    "timezone",
+                    "as_of",
+                    "label",
+                    "start_date",
+                    "end_date",
+                    "days",
+                    "start",
+                    "end_exclusive",
+                    "start_utc",
+                    "end_exclusive_utc"
+                  ],
+                  "properties": {
+                    "period": {
+                      "type": "string"
+                    },
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "as_of": {
+                      "type": "string",
+                      "description": "The local date that relative periods were resolved against"
+                    },
+                    "label": {
+                      "type": "string",
+                      "description": "e.g. \"October 2026\", \"Q3 2026\", \"2026-W46\", \"FY2027\", or \"start to end\""
+                    },
+                    "start_date": {
+                      "type": "string",
+                      "description": "First day (YYYY-MM-DD)"
+                    },
+                    "end_date": {
+                      "type": "string",
+                      "description": "Last day, inclusive (YYYY-MM-DD)"
+                    },
+                    "days": {
+                      "type": "integer"
+                    },
+                    "start": {
+                      "type": "string",
+                      "description": "Local start, ISO 8601 with offset (local midnight)"
+                    },
+                    "end_exclusive": {
+                      "type": "string",
+                      "description": "Local end, exclusive: the midnight after end_date. Filter with >= start and < end_exclusive"
+                    },
+                    "start_utc": {
+                      "type": "string"
+                    },
+                    "end_exclusive_utc": {
+                      "type": "string"
+                    },
+                    "week_start": {
+                      "type": "string"
+                    },
+                    "fiscal_year_start": {
+                      "type": "string",
+                      "description": "Month name, when not January"
+                    },
+                    "comparison": {
+                      "type": "object",
+                      "required": [
+                        "type",
+                        "method",
+                        "label",
+                        "start_date",
+                        "end_date",
+                        "days",
+                        "start",
+                        "end_exclusive",
+                        "start_utc",
+                        "end_exclusive_utc"
+                      ],
+                      "properties": {
+                        "type": {
+                          "type": "string"
+                        },
+                        "method": {
+                          "type": "string"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "start_date": {
+                          "type": "string",
+                          "description": "First day (YYYY-MM-DD)"
+                        },
+                        "end_date": {
+                          "type": "string",
+                          "description": "Last day, inclusive (YYYY-MM-DD)"
+                        },
+                        "days": {
+                          "type": "integer"
+                        },
+                        "start": {
+                          "type": "string",
+                          "description": "Local start, ISO 8601 with offset (local midnight)"
+                        },
+                        "end_exclusive": {
+                          "type": "string",
+                          "description": "Local end, exclusive: the midnight after end_date. Filter with >= start and < end_exclusive"
+                        },
+                        "start_utc": {
+                          "type": "string"
+                        },
+                        "end_exclusive_utc": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "Payment Required"
+          }
+        }
+      }
+    },
+    "/v1/business_day_schedule": {
+      "post": {
+        "operationId": "businessDaySchedule",
+        "summary": "Holiday-aware job schedules: nth or last business day, weekly or cron with a holiday rule; next runs and run-today check",
+        "tags": [
+          "Business days"
+        ],
+        "x-payment-info": {
+          "price": {
+            "mode": "fixed",
+            "currency": "USD",
+            "amount": "0.001"
+          },
+          "protocols": [
+            {
+              "x402": {}
+            }
+          ]
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "rule"
+                ],
+                "properties": {
+                  "rule": {
+                    "type": "string",
+                    "enum": [
+                      "nth_business_day",
+                      "day_of_month",
+                      "weekly",
+                      "cron"
+                    ],
+                    "description": "nth_business_day needs n; day_of_month needs day; weekly needs weekdays; cron needs expression"
+                  },
+                  "n": {
+                    "type": "integer",
+                    "minimum": -23,
+                    "maximum": 23,
+                    "description": "nth_business_day: 1 = first business day of the month, 3 = third; -1 = last, -2 = second to last. Not 0"
+                  },
+                  "day": {
+                    "oneOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 31
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "last"
+                        ]
+                      }
+                    ],
+                    "description": "day_of_month: 1–31 (31 means the last day in shorter months) or \"last\""
+                  },
+                  "weekdays": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 7,
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 6
+                    },
+                    "description": "weekly: weekday numbers, 0 = Sunday, e.g. [1] for every Monday"
+                  },
+                  "expression": {
+                    "type": "string",
+                    "description": "cron: 5 or 6 field cron expression, e.g. \"0 9 25 * *\". At most 96 runs a day",
+                    "example": "0 9 25 * *"
+                  },
+                  "time": {
+                    "type": "string",
+                    "default": "09:00",
+                    "description": "Local run time HH:MM for nth_business_day, day_of_month and weekly (cron uses its own times)"
+                  },
+                  "timezone": {
+                    "type": "string",
+                    "description": "IANA time zone, e.g. America/New_York (default UTC)"
+                  },
+                  "adjust": {
+                    "type": "string",
+                    "enum": [
+                      "next",
+                      "previous",
+                      "modified_following",
+                      "modified_preceding",
+                      "nearest",
+                      "skip",
+                      "none"
+                    ],
+                    "default": "next",
+                    "description": "When a scheduled date is a weekend or holiday: move to the next/previous business day; modified_following = next unless that crosses into the next month, then previous; nearest (ties go earlier); skip the run; or none. Not used by nth_business_day"
+                  },
+                  "months": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 12,
+                    "items": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 12
+                    },
+                    "description": "Only these months, e.g. [1,4,7,10] for quarterly"
+                  },
+                  "from": {
+                    "type": "string",
+                    "description": "Runs at or after this time: YYYY-MM-DD (local midnight), local YYYY-MM-DDTHH:MM, or ISO 8601 with offset. Default: now"
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 50,
+                    "default": 5,
+                    "description": "How many runs to return (searches up to 10 years ahead)"
+                  },
+                  "check_date": {
+                    "$ref": "#/components/schemas/Date",
+                    "description": "Date to answer 'does it run on this date?'. Default: the local date of from (today)"
+                  },
+                  "country": {
+                    "$ref": "#/components/schemas/Country"
+                  },
+                  "holidays": {
+                    "$ref": "#/components/schemas/Holidays"
+                  },
+                  "workdays": {
+                    "$ref": "#/components/schemas/Workdays"
+                  }
+                }
+              },
+              "example": {
+                "rule": "nth_business_day",
+                "n": 3,
+                "time": "09:00",
+                "timezone": "Europe/London",
+                "country": "GB",
+                "from": "2026-11-10",
+                "count": 3
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "rule",
+                    "description",
+                    "timezone",
+                    "adjust",
+                    "from",
+                    "count",
+                    "runs",
+                    "check"
+                  ],
+                  "properties": {
+                    "rule": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "The schedule in plain English"
+                    },
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "adjust": {
+                      "type": "string"
+                    },
+                    "from": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "runs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "date",
+                          "datetime",
+                          "utc",
+                          "weekday",
+                          "scheduled_date",
+                          "adjusted",
+                          "is_business_day"
+                        ],
+                        "properties": {
+                          "date": {
+                            "type": "string",
+                            "description": "Run date (after adjustment)"
+                          },
+                          "datetime": {
+                            "type": "string",
+                            "description": "Local run time, ISO 8601 with offset"
+                          },
+                          "utc": {
+                            "type": "string"
+                          },
+                          "weekday": {
+                            "type": "string"
+                          },
+                          "scheduled_date": {
+                            "type": "string",
+                            "description": "The date the rule produced before the weekend/holiday adjustment"
+                          },
+                          "adjusted": {
+                            "type": "boolean"
+                          },
+                          "is_business_day": {
+                            "type": "boolean"
+                          },
+                          "reason": {
+                            "type": "string",
+                            "description": "Why the scheduled date was moved: weekend, or holiday: <name>"
+                          }
+                        }
+                      }
+                    },
+                    "check": {
+                      "type": "object",
+                      "required": [
+                        "date",
+                        "weekday",
+                        "is_business_day",
+                        "reason",
+                        "runs",
+                        "run_times"
+                      ],
+                      "properties": {
+                        "date": {
+                          "type": "string"
+                        },
+                        "weekday": {
+                          "type": "string"
+                        },
+                        "is_business_day": {
+                          "type": "boolean"
+                        },
+                        "reason": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "weekend, holiday: <name>, or null on a business day"
+                        },
+                        "runs": {
+                          "type": "boolean",
+                          "description": "Whether the job runs on this date"
+                        },
+                        "run_times": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "datetime",
+                              "utc",
+                              "scheduled_date"
+                            ],
+                            "properties": {
+                              "datetime": {
+                                "type": "string"
+                              },
+                              "utc": {
+                                "type": "string"
+                              },
+                              "scheduled_date": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "scheduled_run_moved_to": {
+                          "type": "string",
+                          "description": "When a run was scheduled on this date but moved: its new date, or \"skipped\""
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "Payment Required"
+          }
+        }
+      }
+    },
+    "/v1/time_buckets": {
+      "post": {
+        "operationId": "timeBuckets",
+        "summary": "Split a time range into hour/day/week/month/quarter/year buckets in a time zone, DST-aware",
+        "tags": [
+          "Reporting"
+        ],
+        "x-payment-info": {
+          "price": {
+            "mode": "fixed",
+            "currency": "USD",
+            "amount": "0.001"
+          },
+          "protocols": [
+            {
+              "x402": {}
+            }
+          ]
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "from",
+                  "to"
+                ],
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "description": "Range start: YYYY-MM-DD (local midnight), local YYYY-MM-DDTHH:MM, or ISO 8601 with offset"
+                  },
+                  "to": {
+                    "type": "string",
+                    "description": "Range end, exclusive (same formats)"
+                  },
+                  "bucket": {
+                    "type": "string",
+                    "enum": [
+                      "minute",
+                      "hour",
+                      "day",
+                      "week",
+                      "month",
+                      "quarter",
+                      "year"
+                    ],
+                    "default": "day"
+                  },
+                  "size": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 30,
+                    "default": 1,
+                    "description": "minute: 1,2,3,4,5,6,10,12,15,20,30; hour: 1,2,3,4,6,8,12. Other buckets: 1"
+                  },
+                  "timezone": {
+                    "type": "string",
+                    "description": "IANA time zone, e.g. America/New_York (default UTC)"
+                  },
+                  "week_start": {
+                    "type": "string",
+                    "enum": [
+                      "monday",
+                      "sunday",
+                      "saturday"
+                    ],
+                    "default": "monday",
+                    "description": "First day of the week. monday = ISO weeks (labels like 2026-W46)"
+                  },
+                  "fiscal_year_start": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 12,
+                    "default": 1,
+                    "description": "Month the fiscal year starts (1 = January). Quarters, halves and years follow it; fiscal years are named by the calendar year they end in (start 7: FY2027 = July 2026 – June 2027)"
+                  },
+                  "clip": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Clip the first and last buckets to [from, to) instead of returning whole buckets flagged partial"
+                  }
+                }
+              },
+              "example": {
+                "from": "2026-10-31",
+                "to": "2026-11-03",
+                "bucket": "day",
+                "timezone": "America/New_York"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "timezone",
+                    "bucket",
+                    "size",
+                    "from",
+                    "to",
+                    "count",
+                    "buckets"
+                  ],
+                  "properties": {
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "bucket": {
+                      "type": "string"
+                    },
+                    "size": {
+                      "type": "integer"
+                    },
+                    "from": {
+                      "type": "string"
+                    },
+                    "to": {
+                      "type": "string"
+                    },
+                    "week_start": {
+                      "type": "string"
+                    },
+                    "fiscal_year_start": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "buckets": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "label",
+                          "start",
+                          "end",
+                          "start_utc",
+                          "end_utc",
+                          "hours"
+                        ],
+                        "properties": {
+                          "label": {
+                            "type": "string",
+                            "description": "2026-11-01, 2026-W45, 2026-11, 2026-Q4, FY2027-Q2, 2026, or a local time like 2026-11-01T01:00-05:00"
+                          },
+                          "start": {
+                            "type": "string"
+                          },
+                          "end": {
+                            "type": "string",
+                            "description": "Exclusive"
+                          },
+                          "start_utc": {
+                            "type": "string"
+                          },
+                          "end_utc": {
+                            "type": "string"
+                          },
+                          "hours": {
+                            "type": "number",
+                            "description": "Real length: 23 or 25 on clock-change days"
+                          },
+                          "partial": {
+                            "type": "boolean",
+                            "description": "The bucket extends beyond [from, to)"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "402": {
+            "description": "Payment Required"
           }
         }
       }
