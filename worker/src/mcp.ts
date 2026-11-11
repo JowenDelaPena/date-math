@@ -13,7 +13,7 @@ import {
   SUPPORTED_PROTOCOL_VERSIONS,
 } from "@modelcontextprotocol/sdk/types.js";
 import { createPaymentWrapper } from "@x402/mcp";
-import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
+import { declareDiscoveryExtension } from "./bazaar";
 import { ORIGIN, VERSION } from "./app";
 import { InputError } from "./errors";
 import { getPayments, ICON_URL, inputSchemaFor, outputExampleFor, outputSchemaFor, type Env, type Payments } from "./payments";

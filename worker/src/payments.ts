@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { paymentMiddlewareFromHTTPServer, x402HTTPResourceServer, x402ResourceServer } from "@x402/hono";
 import { HTTPFacilitatorClient, type RoutesConfig } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
-import { bazaarResourceServerExtension, declareDiscoveryExtension } from "@x402/extensions/bazaar";
+import { bazaarResourceServerExtension, declareDiscoveryExtension } from "./bazaar";
 import { api } from "./app";
 import { CDP_FACILITATOR_URL, cdpAuthHeaders } from "./cdp";
 import outputExamples from "./output-examples.json";
